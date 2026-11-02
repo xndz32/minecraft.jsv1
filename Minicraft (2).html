@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minicraft</title>
+<style>
+:root{--sky:#8fcbf2;--panel:rgba(20,16,10,.5);--fg:#fff;--sel:#ffd84a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--sky:#101a33;--panel:rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{--sky:#101a33;--panel:rgba(0,0,0,.6)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--sky);color:var(--fg);font:15px/1.4 system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#c{position:fixed;inset:0;display:block}
+#cross{position:fixed;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none;mix-blend-mode:difference}
+#cross:before,#cross:after{content:"";position:absolute;background:#fff}
+#cross:before{left:8px;top:0;width:2px;height:18px}
+#cross:after{left:0;top:8px;width:18px;height:2px}
+#bar{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:4px;padding:4px;background:var(--panel);border-radius:6px}
+.slot{width:min(40px,9.4vw);height:min(40px,9.4vw);font:700 12px ui-monospace,monospace;color:#fff;text-shadow:1px 1px #000;display:flex;align-items:flex-end;justify-content:flex-end;box-sizing:border-box;border:3px solid transparent;border-radius:3px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.35);background:center/84% no-repeat}
+.slot.on{border-color:var(--sel)}
+.btn{position:fixed;width:62px;height:62px;padding:0;border-radius:14px;border:3px solid rgba(255,255,255,.55);background:var(--panel);color:var(--fg);font-size:26px}
+#jump{right:18px;bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+#brk{right:92px;bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+#plc{right:18px;bottom:calc(166px + env(safe-area-inset-bottom,0px))}
+@media (hover:hover) and (pointer:fine){.btn{display:none}}
+#stick{position:fixed;width:100px;height:100px;margin:-50px 0 0 -50px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:var(--panel);display:none;pointer-events:none}
+#knob{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px;border-radius:50%;background:rgba(255,255,255,.7)}
+#menu{position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;background:rgba(10,8,4,.62)}
+#menu{overflow-y:auto;justify-content:flex-start}
+#menu>.scr{margin:auto 0}
+#menu h1{margin:0;font:900 46px/1 ui-monospace,Menlo,Consolas,monospace;text-shadow:4px 4px 0 #3b3b3b}
+#menu p{margin:0;max-width:36ch;opacity:.92}
+#play{font:800 20px ui-monospace,Menlo,Consolas,monospace;color:#fff;background:#5da53a;border:3px solid #2f5d1b;border-bottom-width:6px;padding:10px 38px;border-radius:6px}
+.scr{display:flex;flex-direction:column;gap:10px;width:min(90vw,380px);text-align:center}
+.scr[hidden]{display:none}
+#menu h2{margin:0 0 4px;font:800 24px ui-monospace,Menlo,Consolas,monospace;text-shadow:3px 3px 0 #3b3b3b}
+#menu .red{color:#ff5555}
+#menu button,#inv button{padding:10px 12px;font:700 16px ui-monospace,Menlo,Consolas,monospace;color:#eee;background:#707070;border:3px solid #000;border-color:#a8a8a8 #3c3c3c #3c3c3c #a8a8a8;border-radius:0;text-shadow:2px 2px #3a3a3a}
+#menu button:hover,#menu button:focus-visible,#inv button:hover{background:#6d78c4;color:#fff;outline:none}
+#menu button:disabled,#inv button:disabled{opacity:.5;background:#555;color:#aaa}
+#menu .go{background:#5da53a}
+#menu input{padding:10px;font:600 15px ui-monospace,Menlo,monospace;color:#fff;background:#000;border:3px solid #a0a0a0;border-radius:0;box-sizing:border-box;user-select:text;-webkit-user-select:text}
+#logo{position:relative;margin-bottom:30px;font:900 clamp(38px,12vw,60px)/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:#d0d0d0;text-shadow:0 1px #999,0 2px #888,0 3px #777,0 4px #666,0 5px #555,0 6px #444,0 9px 10px rgba(0,0,0,.6)}
+#splash{position:absolute;right:-6px;bottom:-28px;font:700 16px ui-monospace,Menlo,monospace;font-style:normal;color:#ff0;text-shadow:2px 2px #3f3f00;white-space:nowrap;transform:rotate(-14deg);animation:pulse .9s ease-in-out infinite alternate}
+@keyframes pulse{to{transform:rotate(-14deg) scale(1.12)}}
+@keyframes fade{0%,70%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#splash{animation:none}}
+body:not(.play) :is(#bar,#hp,#top,#cross,#dn,#jump,#brk,#plc,#nm,#pb,#goal){display:none}
+#top{position:fixed;right:10px;top:calc(10px + env(safe-area-inset-top,0px));display:flex;gap:8px}
+#top .btn{position:static;width:46px;height:46px;font-size:20px}
+#dn{right:92px;bottom:calc(166px + env(safe-area-inset-bottom,0px))}
+#hp{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);white-space:nowrap;pointer-events:none}
+#hp b{font-weight:400;font-size:18px;color:#e03131;text-shadow:1px 1px #000;margin:0 1px}
+#hp b.h{opacity:.55}
+#hp b.e{color:#444}
+#nm{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font:700 15px ui-monospace,Menlo,monospace;color:#fff;text-shadow:2px 2px #000;opacity:0;pointer-events:none;white-space:nowrap}
+#pb{position:fixed;left:50%;top:calc(50% + 24px);width:60px;height:5px;margin-left:-30px;background:rgba(0,0,0,.5);display:none}
+#pb i{display:block;height:100%;width:0;background:#fff}
+#dbg{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top,0px));margin:0;padding:4px 6px;font:12px/1.35 ui-monospace,Menlo,monospace;color:#fff;background:rgba(0,0,0,.45);pointer-events:none}
+#inv{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;width:min(94vw,440px);max-height:80vh;overflow:auto;box-sizing:border-box;padding:14px;background:#c6c6c6;border:3px solid #000;border-color:#fff #555 #555 #fff;color:#222}
+#inv h2{margin:0 0 10px;font:800 18px ui-monospace,Menlo,monospace}
+#ig{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.cell{position:relative;aspect-ratio:1;box-sizing:border-box;border:3px solid #555;background:#8b8b8b center 36%/60% no-repeat;display:flex;align-items:flex-end;padding:2px;font:700 9px/1.05 ui-monospace,Menlo,monospace;color:#fff;text-shadow:1px 1px #000;cursor:pointer;overflow:hidden}
+.cell:hover{border-color:#fff}
+.cell i{position:absolute;right:3px;top:1px;font:700 13px ui-monospace,monospace;font-style:normal}
+.em{grid-column:1/-1;margin:6px 0;color:#444;font:600 13px system-ui,sans-serif}
+#fu{margin:0 0 6px;font:600 12px/1.3 ui-monospace,Menlo,monospace;color:#333}
+#fu:empty{display:none}
+.ic{display:inline-block;width:20px;height:20px;background:center/contain no-repeat;vertical-align:middle}
+#ic{display:block;width:100%;margin-top:10px}
+#inv .rb{display:flex;align-items:center;gap:8px;width:100%;margin-top:6px;padding:6px 8px;text-align:left}
+#inv .rb .ic{flex:none;width:30px;height:30px}
+#inv .rb b{flex:1;font-size:13px}
+#inv .rb small{display:flex;align-items:center;gap:2px;white-space:nowrap;font:700 13px ui-monospace,Menlo,monospace}
+#inv .rb small .ic{width:22px;height:22px;margin-right:4px}
+#goal{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);max-width:min(80vw,560px);padding:5px 10px;font:600 13px/1.25 ui-monospace,Menlo,monospace;text-align:center;color:#fff;text-shadow:1px 1px #000;background:var(--panel);border-radius:6px;pointer-events:none}
+#goal:empty{display:none}
+@media (max-width:700px){#goal{top:calc(64px + env(safe-area-inset-top,0px))}}
+#gen{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(10,8,4,.88);font:800 22px ui-monospace,Menlo,monospace;text-shadow:3px 3px 0 #3b3b3b}
+#gbar{width:min(70vw,300px);height:10px;background:#000;border:2px solid #777}
+#gbar i{display:block;height:100%;width:0;background:#5da53a}
+#wt{position:fixed;inset:0;background:rgba(30,80,200,.38);pointer-events:none;display:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="cross"></div>
+<div id="stick"><i id="knob"></i></div>
+<div id="bar" class="ui"></div>
+<button class="btn ui" id="plc" aria-label="Colocar bloco">🧱</button>
+<button class="btn ui" id="brk" aria-label="Quebrar bloco">⛏️</button>
+<button class="btn ui" id="jump" aria-label="Pular">⬆️</button>
+<div id="menu" class="ui">
+  <div class="scr" id="s-main"><div id="logo">MINICRAFT<em id="splash">Feito em 5 minutos!</em></div><button data-do="load" id="cont">Continuar mundo salvo</button><button data-go="new">Criar novo mundo</button><button data-go="opt">Opções…</button><button data-go="help">Como jogar</button></div>
+<div class="scr" id="s-new" hidden><h2>Criar novo mundo</h2><button data-do="mode">Modo de jogo: Sobrevivência</button><input id="seed" placeholder="Semente (vazio = aleatória)" autocomplete="off"><button data-do="new" class="go">Criar mundo</button><button data-go="back">Cancelar</button></div>
+<div class="scr" id="s-opt" hidden><h2>Opções</h2><button data-do="dist">Distância de visão: Normal</button><button data-do="fov">Campo de visão: 72</button><button data-do="dbg">Mostrar coordenadas: Não</button><button data-go="back">Concluído</button></div>
+<div class="scr" id="s-pause" hidden><h2>Jogo pausado</h2><button data-do="resume" class="go">Voltar ao jogo</button><button data-go="opt">Opções…</button><button data-do="quit">Salvar e sair para o título</button></div>
+<div class="scr" id="s-dead" hidden><h2 class="red">Você morreu!</h2><button data-do="respawn" class="go">Renascer</button><button data-do="quit">Sair para o título</button></div>
+<div class="scr" id="s-help" hidden><h1>Como jogar</h1>
+  <p><b>Sobrevivência:</b> soque uma árvore (segure o clique) → faça tábuas no inventário (E) → faça uma mesa de trabalho e coloque no chão → toque nela (botão direito ou 🧱) para criar picaretas → ferro (fornalha + carvão) → diamante, bem fundo nas cavernas (y de 3 a 13).</p>
+  <p><b>Dicas:</b> a melhor ferramenta do inventário é usada sozinha. Quando um item acaba, o espaço some da barra. No subsolo é escuro e tem zumbis.</p>
+  <p><b>PC:</b> WASD e mouse. Clique esquerdo quebra, direito coloca/usa, 1–9 troca o item, E inventário, F3 coordenadas, Shift agacha, Ctrl corre, duplo espaço voa no criativo.</p>
+  <p><b>Celular:</b> joystick à esquerda, arraste à direita para olhar. ⛏️ quebra, 🧱 coloca/usa, ⬆️ pula.</p>
+  <button data-go="back">Voltar</button></div>
+</div>
+<div id="top" class="ui"><button class="btn" id="bpause" aria-label="Pausar">⏸</button><button class="btn" id="binv" aria-label="Inventário">🎒</button></div>
+<button class="btn ui" id="dn" aria-label="Descer" hidden>⬇️</button>
+<div id="hp"></div><div id="nm"></div><div id="goal"></div><div id="pb"><i></i></div><pre id="dbg" hidden></pre>
+<div id="inv" class="ui" hidden><h2 id="it"></h2><div id="ig"></div><p id="fu"></p><div id="rc"></div><button id="ic">Fechar</button></div>
+<div id="wt"></div>
+<div id="gen"><div id="gt">Gerando mundo…</div><div id="gbar"><i id="gb"></i></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* Texturas: Alpha Resource Pack 1.21.5 v2. Atlas 8x8 de ladrilhos 16x16:
+   blocos 0-21 (grama topo/lado, terra, pedra, tronco lado/topo, folhas, areia, tabuas, pedregulho, tijolos, bedrock, agua,
+   carvao, ferro, diamante, mesa topo/lado/frente, fornalha frente/lado/topo), itens 24-43 (graveto, carvao, barra de ferro, diamante, ferramentas).
+   Grama e folhas já vêm tingidas com a cor do colormap do pacote. Skins dos mobs em 64x32. */
+const PACK={
+atlas:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAA0XUlEQVR42u29eXyU9bn3/76X2WcymSwkEAgQAmFftOJucQc9tljr6WJdTg/taT22hy7HY7ef7VNb+7S1x1pP28dyamut1qNWrEcB1wiICCqLQCALCYSETJbJZPbtvr/PH8N9MzNJIAn9Pbanc71eeRHumU8mM9f+ua7vHemWey8Rkgy6JkhE0gBYHCqxoSR2twV3qZ10MkMimkbXBLIskUpqxIIJymo8lE1xEfTHUC0yyXiG8ho3QX+M0ionkUACAKtdxepUScUyuMvsdLzXT0WNm1QiwycztbQdDwDQ6Q8CsGJp3bBrHT2DzKj2mY837j7MiqV1bEvNIhqNkisul4vS0lIADh06RENDA8FgcMTnvfni48yq8aAoCkvqJ/HI83tYOncKc6d5eeq1FmZP8yLLMkIIKks9DMWSeJ02BkJRzp47hXcPHUcIwXstfhbNrgJA13X2t/WZr7NodhWSJLG3uYez5k8lnU6jKAqSJBE6y85v73xd+sKvV4pEOMW+1zt5848tkoFd/dVzxPof75Ryf+/lH6oXO/7UKt2x7mqxOFHJ5ZdfgRA6Quik02lU1UIikcBqteJ0ukin06STaXQ0UokkiqoSTyTwlpSgIkEynsFT5kBWZWRZIuiPYrWrpOIZ+iNhahp8OL02IoEEkWASm1NFtTgRugBAy+iUVjnJ+GNY7Sr6pgG4xUk4kGD6wgoC3RGsTpVENI3VqWJzZg0iHEjQeOAw06pK2bKn3VRw2/EAQzUXs/eFR5hR7TMNwjCGtuMBOnoG+c3Gd5hz2aw8hReK2+0GoLS0lNLSUg4dOkRVVVZR0WiUZDJJJuPAarXyn+vfxmazsWBGGU+8fJDZ07ycPXcKj254jwWzKqmt9vCnLT0snV1Npz/MwplJhBBce1EDK8+vR1EU83Wvu2QeAKlUCkVRUBSFay6cg8ViQZIkUqkU61/bR2woq1uHx0okkODNP7ZI51w3S+x8rk0C6G4eZNnVM8SuTR3Slx69VkgSND56AIC3nm3lyz/8JKl0ErtSis1q42B7E+XVbnRdJ51Kc7injTkzFlG3ZCltTa+hZTQsVguKqlDqK0V1eKxUzfSSSWkcPRBBVWUsNhWLXcFiV1AUmVQsg8WhUlrtIhFNEx6IY7Wr1C6soP9oCOmVQayfLSURTZNKZAAI+mPYtoVJ1ZditatEAglKq130P3yE8FI7NoeK9OogK1aeTePuw8yo9tHRM8htJ/6P/zlT+Y27D5sfbEfPYP7zAL/fb3p3JBIxlQ5QU1NDV1cXLpcLgKqqKkpLSwkGg7hcWe9IpkFEozgcDhqm+5AkCU3TkCQJIYT5dbQnnGdcqqryXouf6y6Zhz80hCRJSJJEIpHAbreTyWRwu90k4rE8nKIolDtdWCwWnvzedgng2MEAj31rq3T2NTPFBTfMYdnVM8RDd7wiLb6sFrvbgqvUJoQuGOiK8O6GdulffrtKaGkdVTgoLa3E5XbTduQAk6f60BFYLBYApk6dSkaOcbxlN25rOX19B7FnbCiqitcxCbWzaQBniRVFlXH77GhpDYtNJdAdQegCWZVRhiSsDgtWh4rFruJRZWRFonVnD86dUcqXXE7PQ69gBYbc2RfWNw0A0HVoEMdbEbiijP6Hj2QVvXuQ1O4EM6p9tB0PEK46i+smB2ncfdj07lzPn1ZVSqc/yLSq0mEpAjBDvBHW/X7/MEXnhn/je5fLxdkLpnGwI0DtJDtCCCq8bjr9EQAk6WTklSSJqZNcvP5unBlTvGx77xid/giLZleh6zpWq5UKl9v84HMlY3egqiqapqGqKkf7es20Ychj39oqAbzzQrt0wUcbxFBv1mjsbgvRoSSxoRRCF6aD6ZogOpSkd6iLSMKBHFCw2e2EQ2G8pSWEhkLoQkdRFFLJJIoSw+F0Ul5ejq7ryLLMm283Ik+dW4bQBZNmeIkE4viq3XjKHdicFqYvqmTO8snEw2kSkRQur42yyS4SkRSZlI7Ta+PiJTPx+N/l4iUzuW3l2WgbB7h4yUxmVPuYUe3LKh/g5QDlSy4H4OIlM/M+II//XdqOB1ixtI4te9rNxw0P37KnHYAD1JkpwLhmSGlpKdFolGg0itvtJhqN0tXVZV6rqakZ9uX3+9E0jUwmY3q/IYvnVCOE4MCRQaxWK7IsI8uymeNTqdSJGiWMEIJUKoXFks29mqaRSCTMLyGE+a8QIq82APjszy4Xn3ngcvOBdFKj7Z2scUSDSRKRNO9ubJd+etsGSZKzRhnsiRIbSlJdVQ2SoNQ9iWQiTnV5LQ6llEpvDZPLZ1DprSGeSJJMJVF1J1pcobe3F4vFgtPpRE4nNDzlDtp39zJphpdjhwIM9UZNy2vf00vFNA8Wm4q/PUjH3j6sDguqVcZiVej0B+noGTQVY+RxI1QDpjEM7HnFLOwMDz8dPrc2GAlvKNrwdCPU5xZ6kUiEYDBIMBikq6uLrq4usxaQZZlpVSUACCGorfbQPxQxc7emaaTTaYQQRKNRJEniaE8YVVXpC4YJhmJmqjCkezDAYCJOMJmgLxKmZyhIXyRMJpMxDS5XHCVWgj3ZqHTWypliqDeGzZmNJO+9dhT7iah67ofrxeN3vyGdf8Mc8buvb5EyaR2/vweHw8Hx/iPMW/pJ+oLHkGxpEnqYaDTGYNRP/ax6nE4n7ceaSGhhvF5vNvWlksiDxyMoqszUeeWE+uO4vDYigwmSsTSB7gi6LoiHU0ydX8aU2WWUVjmzBmFXyWR0ViytM5XS6Q9SctZ1poJuW3k2t6082wzbxvdGKDe8/kzwhjcXhuzc60bRl3u9oaEBv99PJpOhtspLR3cQq9WKpmmkUilkWWZvcw9zajwIISgvcbHjYD/JZNKMAjabLS+vG6FV13WqSrxUlXiZUVXNtIpK83lCCFRVzSq3xc8H/q5ODHZHefL726WzVs0UFrvC43e/IS344FRu/z9XibefPyw9/JVGacWn5ou3nm2VANKJDOddP1scbxlkcHAQ0g4ycZnWA0/R3z9AMhEnlUwRTQ+AgK7uY7it5Vxw/lV4PB4qvVNRFJUqXy2qs9ROqD9OSaUDLa2jWGTSSZ3K2hL6OsO4fXZKKhx07h8gk9ZxeKykkxpDvTFqGnzQi+mNAG1dW/CeyNmNu7MVfkfPYF7Ozs3nRoSYKN7I/UYBaEhXV1fedaMwzM3/VVVV9AcUaqs9bN7VYSqnpXOIm69ZzKEjg9jtdnRdByAcS7GkYfKI9QGA1+ulr6/PTBeJRIJkMonNZkOWZZLJJHa73cSdt7SO0DkWPOUOw8NxlFgBhMNtZaArW3Te/tBVwu2zEwkmxNv/fVgC2P5Mi3TJJ+aJ2tpa4plBamqmEEr0M3VaDYODQSoqKpk0qY6jnZ2EB5IEOE7f/mO4PW5S6TTReISKkhrUeDiFr9pFaZULh9uKJEnEQiksdpXSSU5KKp2kExm0jI7LayMRTaEoEghB18EAbUnVzNeFxZoR2o2cbrRxRl43QvuZ4K3lmC2g3++noaEhr+o3vH406dV1hBBIkoTFYiGZTKKqKruaexBCsLvFj91up8pnJRiKMWNKKYOROAAlDiuLZlchhMDj8RAOn+wSDKMxDETTNGzO7O9kFIPRaJSSiil0t2TfZzKWITqYRNcEwd6TnUNkIEGoL4ah/MtuW8jSK2eIva8exWqxYhEebDY7XqmSZDKFLCdQdAfH2vuprKihrqGKzS8/S03NVOLROBYp265G0wHkkgoHQX8UCRjoitDXGcJb6UDogkB3hGNNAwT9UZwlNryTHFjtKhW1JThL7UiKbIbkjp5BU0Fb9rTnETdGeDdC+Yqldcyo9pmKPlO8kdfdbrfp+Yan+/3+YfnfeI4RPRRFwWazEY/HOXQsxA0r6jl0ZJD5dRVIkkQ8HkeWZaxWK0II5k/3mQWhgTd+lhCCdDqNLMvY7XbsdjuyLJtRwmgVjTqg61CApq3HskXulmOkUxo7n2uTZEXi0W9slZZ/qF488rXNknzis17+oXoRD6VIRNPs+FOrdOToUfYceIt4PE4o3k9CH8Jp9SGETjjZR8/AEdqa3qGmZipl5WWoVhWL1UIoFMJb4kVWVJmyyW76OsN4JzlJxTOUT/UQ6I7g9tmpP6eaYG+MkgoHPW1BkCS6DgZIxzM4PNZhYdxQzm0rzzYVa1w38nbb8YCZ6/8ceJfLleflRp43jCAajVJaWmped7lcpsJaj4Xo6B4yiz4j/ycSCVKpFPtae5k9fRJOpxP9RLQwuoLJ5XazZlAUhXQ6bUaSzv4+8+tIb7aiN1pEw3iEEHQe6GfXpg4zrD9+9xvSkiumiwNbskZxznV13LHuavHIXZslAEmGyGCCR7+xRQKora1l6YLlvLHzNdy2cgYDg5R6SwnGenEopVSV1VJZWY7T5aTneDcAsfQgZWU+gkNB5KG+GI4SK7FgEqELPOUOOvb2ISsyqXiG7uZBSie5CByPkE5oxIaSpBIZUokMWlrLC82GcnLJm/Ill5vXc1u60LvPmSH+TPB+v9/0ZiPsGx7vcrloaGigpqbGvBYMBk1W0O/3m0WdEAJN07Db7aiqit1uZ/mCaWa7p+s6mqYhyzKZTIZkMonVauXA4X5ToRaLBSEEVSVeKt0eKlxuKt0e88t4HcMQNE1j2dXZ9PaFX68UX/79tQJgz8tHpLfWZws+WZGJBrO/4x3rrha1Cyp4+KuN0tnXzBT//KurxGAggMVi5aKLLuDYsU4mVVXhDxzFolrRpCj9Q9309Q0QCg0xb8ECEokEmUyGdCrDkfajyLOWVRHqj5PJ6AT9UWRZwuG2kIimiIVSHHmvDxAIXSDJEpXTPFTPKkXTdLSMbrZxRv7Ore47/UE8/nfzQviMah+d/qBZ1Z8pvqqqyuz1cz0+9/+F14w0UFVVhaZp1FZ7SKVSCCHM0ByLxdjd4sdms2GzYD6u6zo7DxwziZ3cIlBRFJxOJ5IkYbPZcDgcZhpwuVxmp2BEiqb2AXo7hrKsokVm8Hj29/3Cf64UX3o0aww/+/RGKTaUNYBQXxyrQzWJIC2tM6NmDgk9RGBgkDnzZyLLEpmMhtVioft4N709J8gmXWLv7j2UOCop90xBCJ2amimouqbjKrXRdzREMpomEUkjKxJIEosvr6XvSIiqulIGusLZYZEkEeiKULugAtWiQMsQFy+ZmZe/jdxtKNWgbn+z8Z08hs+QXPzh/hQWLTZ2fPksk+6tqakZxvUb+d7oBIwoYRSOVquV9w73M3v6JKxWK5lMhqM9YSrKSlBVlcVzqk1jMBR9VsNkLlhi59fPvmN6fyqVosPfg8ViIZ1Om+8tnU6btYOqqqiqisViMY3Has8qdPszLcw6uzqLSWn0HQ2ZP6P1nR7z+6atXXzx4VVC13QeXLNJ+sVn7xOJw0kG04Ns3baV2mnTkGSJodAQy5ddQv/AAJMqKggODZF0hFHUNEPhQSb5ahkcHEQOBxJkkhoenx3VIlN3VhU1DWV4fHaO7uunt2OII+/1EQkksjMAh4Knwk6gK0I8nMpTkpG/jYLOCNczqn15fH7u94V4ixYbFz43/BuFYK73G+SQkQpyDSMYDJJMJkmlUpy/cDL7WnvzBjq7D3Yze0qW3l02p9r03p5Akt/+924Wza6itMSZrTvKyql0eyi12an2llJiseK12pjiK6PC5catqPjsDjyqhVJbtjBcNLuKzqYsZf7mH1uktnd6uOCjc8RAZ5g/fGeb2We6fXbOWjVTIMG7G9slRZUI+mOcu7pedDYfIhQO47I7mDq1Bo+jAkVz4HA6GAh3s+/Q2/gHj7G/eRfxeAxFcxEdTOMfPIrL7UYd6Arj8toQApKxNPFQkkQ0a8FVdaVoGZ2ahjL2bz6GYpHpOTyE3WVB14Q5DQS4beXZJm8PUHLWdVzctSWvd8+t3A2lGy3eRPE1587PM4ZIJEJDQ8MwjqBwHGxEgvraSiRJoqsvhq7rJJNJBnSdqZPcHIylaDoaNNvCTCaDLMsMhKLMnVFGZakHWZZ5aUc77+zvZOncKWiahhCCfa29Jp2cK7n8/6LZVTScN4XG3x0wjQDgH+5bIQA+8Hd14rzVs1FUmTeePIRRCPo7QrS93cN5188mkgjgKS0hHIZQKMzS5SvoOLSLHr+fOTMWMWfOHMpKqpk0aQgtoxGM+imd5CSdTtPd14708i8/LTr7+/J+SYO5SiSyVGYuk5Urnf19lC1ak5dnA4EAfX19HDlyxMynN95440mv2r2blpYWPv7xj9PS0kLJq38gls7gtKgs+84v2HX355EliVAyzSSXjVhaw+ew0hGMcuV9v2XH19fgtqpEUtmf/aJzBq2trXm/V319PStWrABg7dq13H///TQ2No74vC17/6VRUmTZ4rComVRGQyAAhK4LJEmSJClr6EIIoQuBAMFJrX72Yy9eeib7CLkt6/uBVw2FJxIJXnu3nUvPmmkqPlfRAJVuD32RMJVuTx6jBbBhwwaqqqp4+umnWbp0qan0J598knfffReHw0E8Hsfn83H48GFeeuklFi9eTNtglr1zW1XKysqY7HGw9WgfoWSa93qDTHLZSfVrlNpPtpz7+4bI6AJZApz5Ci+UhQsXZvmDFStYsWIFa9euZfXq1dnc2tqKJGcTu5bWNKvTZnGU2e1Wt8Ua6oqEU9FUWk9mMkIIZFWRIUvuSGSjsxEBz2QfwUhR7xdeNZ7YFwmzcE6FqXijbclVdCKRYF9zP6suOBkRnnjiCWbPnk1VVRXr169nyZIlpvL37t1LU1MTO3bs4DOf+QwAf/jDH6ivr2dgYIDjx48DUOaw0jYYIRwOczwcR5UlSmwWLCcmX1ZFIXai5ewKxyh32PBHE5Q5slz8+vXrTe/et2+fqXSANWvWsG7dOurr67MbNqtXs2LFChobG6mvr6evWVW0VCajJTJkEulMYjCWkBQJRFbTkiLLkpzVuKKqsmJTVARCz+i6ltH0wn2ELVu2cPHFF4+6j9DU1MSuXbtYuXKleS0Xv3K2m40tkVHxa69ewLHeAbZ0ixHxyifvRXvsa6Pib73756w/rmF/9h5cLhfS5z96thnOnE7rqJRpLJbK+7/xXL38PJqamujt7WX+/Pl86lOf4plnnmHRokX09fWxadMmZs2aRVtbGxaLhenTp3PddddRUlLCo48+yq233mqOV+vr6zl8+GSBp2kaiqKYlfW8efNoamrKztgzGbxeL7/85S9NhRqyfv36PEUb3l4o9fX1bG/91zckWZL0jK5LiiTZSx32VDiZ0jUhJFkiE09nhJbldSVVliUlux8mZVsC6R8+9N8XGnsHhhj7CI2NjUSjUa699tph4Tc3hI+G/8TSCpraj7F7yD4h/MrP3c3PLXHqfvbDUfGnrAE6+/uYVlFppoB9zf1cetbJWb7dbidecz26rvPkk0+a+X7fvn0AbNy4kenTp7Ny5UpSqRS6rvPCCy8wf/58Fi9ezJ/+9CcW9+yj3GHLN7YTNcHy76/jwLc/l40+GY2Mnl9QfeCeh/j+979vhv9169aNasBr1qwZdm3t2rWU173WKEkSuq6fyP6ABLIsS5JFVix2i5pOpDMio+tCz+Z+SZJAlmSEEGs+uvGDRvjNHUAVykjzCCMcv594dSTlGitNxvdGOrj0LE9ebUAkzHvNr1FeXs7MmTNpb29n+/bt+Hw+otEoqVSK6667jpqaGp5//nm8Xi8+n4/29naee+45XC4Xl5bbaBuMMLPURXswykAsSbnThi4Ey4FIKkPbYIR4OoPDojKUTOG1ZaPP+RYLra2ttLa2Ul9fb4b5XG+vr69n/fr1wyLBvn37WL16NVvfk5AssiKn0cyuRgJkJEVV5ExK06xOi0VL6xpIkpbKZI1B03XESYIpdxdh27ZtpFIpzjnnHHND6YUXXjCvGd1KLomVi//HSxcQG/Sz7o0jJv6GZTXmtdPhv/3tb7O9R/D0fXea+LVr15rXcvGq4e1GIVhY3BkKz+b+eUwreLwj7TH5c4DBwUFee+01AObNm8fGjRtZtGgR8+fPp7W1Fa/Xy9SpU5k1axYHDx6E+BG6wjFKbCqhZJpyp42eSJxqtwOHw4HnxPVqt51g4qTyjTRgeHZjYyNut9scCedeN4q+wkiwdu1app37DVc6mkqhKrLQhdAymo4udAQik8poqlVVUtF0Sui6kCRZUqyKYq90OTNJTdNSmmZ4VjAYNBWfSCTM17722mupqqpi165daJqW54lGhW7gDcU3H8q2hRdOUdg9lN1naD50gHA0fkq8ofi7dmU7JP9d36HuZz+kqqqKu3Zl6K5NcVYBXvrKLeeLkXJ8YU0wWg3gnnkVAM8++yz19fX8/d//PTabjSeffJJoNIrH4zFbw+uvv554PM6mTZuYP38+t9xyS94MX9d1JEnCarWSTqepq6sza4JMJmMuUhhSV1fHd77znZOM2Qh5fqTC0IgMANsOfnmLrgkhKZJkdVosvhk+bzKSSiWGkqnEUDwh0roGIFsVRZx4HkIgKbKspTVtzUc2XFK4a1gohYuqufk7V94PvLrqgnnDABu2NbFwTkUeH5Cb93Pbw8NJnccff5zzzjuPm2++mUQiwbvvvovP5+PGG28kHo9z4MABjhw5wuuvv040GsXv9/PjH/+YgYEBgr++18zty7+/jm13fRpVlrGrCkccVgaiibzHd3w968FTPA4e6+yDKQvNGmD9+vXcf//9eVX/aPnfkM17MhkEkIGkpuvdu7p7sm2+hCRJkiBb8OmaLmxuu3XSwvKK/oOBgXQ8nUETuuHpiUSCZcuWDdtHMKJCbhQqZDE/sbSCY70DPLUrMgxvRIUNHZlR8Ss/dzfrj2tEHvrCMLwRFbb/4acj4qWH77lOFF400kFuCshNA7lFY7/tEvbs2cONN96Ioijs27eP5557jjvvvJONGzeyevVqmpqakCSJnTt3Issyn/70p800kX7lKfNn3fizR9n29c/QFY6f7GOtKqosEYinuPGB37H727fTF0sQSmY/kLaahaN6vpH/c/v+XKNobGzkzeavbrU4LRbFqihaStOS4WRKZHSzHpBkCcWmWgQISULSUpomMrqOBKrDYvmH6/77wtE8b+fOnXlemctVGBPKU3numgun09R+zPz/G93auPA3fOWH/Nxy8rOs+sHdw/BqrrJzPTyv2DvBC1x6lievKOyLhNmzZw/XXHMN27dvx2q15kWMhQsXsm3bNgBsNhutra00NDSwbt06PvjBD+L3+3HZLQQTaUpsKl6vF7ua5eKPDEWZ7nXRGYox2W1HliQzBYSSmTw20CCCjC7A8Hjj/62traxZs8ZUQGNjo1kU2kvt9mQomUxFkilxog+QVDnbBDhUi66hW5wWiyRLkqzKspbSNElCSsfSaeP5BhHT1dXFli1b+PjHPz4s/ObmbmMsXcjcdXV1sXK2m/di3uzv/8aRPLzxI06FVz55L9WvPwiQLQJzXz+nXjHw0lduOV/EYikzp+fm+pF4gcLH/fosAK644gra2toYGhpix44dXH311ciyjM/nY2BggE2bNjF58mRuuukm1q9fbyrmm9/8pmk08+fPz+MBckXXdebMmUNLS4u5vaMoCjfccENeeDU6gkKvy+UJcmniitmvb5ZVWVIsiqKlMpqsKrKW1jShZUOArMqyABSLIjvLnc5MQsuoDlVNDsWTqWg69XcXPHxJ7tKpUZHnrqsbH7rBC9x0001mEVa4tHoqvMELdEjVE8IbvMBZv3voZBH48i8/LUbi+HP7/8JI8Nq77Ri1Q3TyhwG499578563YMECpk6dyvbt2xkcHOQb3/gGgUCAjo6ObOhuawPg8lArsgQem4XBeCqPCzj/nv/DW9/6HHU+N90n0kJG11FlGVmSuOxnT3DnnXeOmgJGigaFKWLre2sbkZBkq6oITddlVVYkWZb0jKZJsiQrVkXR07omKbKUSaQzQhfZNjHbKbDmxo0rRgvBRhqwWq153YGmaaxYsWJULr8wDTh9VcQG/RzrzU4Ow9E4b3RrY8Lf8JUfcl61xPYewfrj2RTSXZui6gd3Z2cBBu9v5PdcImikesCgjDv7+6h0e7DZbGzZsoXzzjuPq6++mqGhIUpKSnjsscfYtGkTCxYs4J577uHQoUN0dHRQXl7OwMAAixYt4umnn+bSKomWQARdCOScTduBWJLzAbuq8PqR3rzHZAlUWSYUCuXRvWvWrBnG9RuKNzoBIzoYUWDL3uxCqJZVrtCSaCYZpMiylsxkcgmgQsIol241cv61115rKuacc84xo0+u0nM908AbOX/3kN3Er3vjCBdOOWbWAFm8nZqa4Xgj59f97Icm/un77uTnd30HLFD1WFbpdUCpsUpvRIBcby9kAo3vRxoCbWorp6KighdffJFbb72VI0eOEIvFsFgseeF81qxZ+Hw+UqkUTqeTJ554gnQ6zWcqBc+3dPOBKWVmTjfkk798gre+9o/mwAjArsokMjpWReaGBx/jnnvuOWUbWKjw3KlgfX09W/evfd3itFkQ4KxwOFKRVFrPCF0InXQsnTIKPqELTEOQJUkIIWRZltbcuHHFqdqwkRSeu6twujbu/2+8yQMAOFQLA6Hsg+UlLgZC0WFcQKc/zLQqj1kDWKZ8EE3T0DTNZOWEEHi9Xurr67nhhhvYu3cvBw4cwGaz4ff7URSFUCjEnDlz+MhHPmIenXK73Sb/r2kadXV1dHZ2kk6nTR4gd+NmypQp5pApt+e///77h+X9kRhCgDebv/qGrumarMiyEEIoVlXRM5qQJAmzFjjp8zknPCXZ6rRabrj4sfPHso9QqKDRwvf/a7w0ucItAKLxFC6H1Ti+QjRxcq3JuB6Np3A7beYevbHk+P21l+a90E9+s4N7b/gAj2/cg6brfOqaZXzt6bf5969em/e8m7/5XwBnhJ9ev9BcrzIWN43dPYB4PG7u/hln9lKpFF6vl0wmY54Gmij+xhtvNBdLDbHZbOYH3N3dzZQpU8yj6IXP+9rXvibxPooK8KtvfghN0/j6z1/lng8vyz/ZemILxqB6v/WnPfzky6tIpVKs+e6zSJI0bJ/g3jsu58v3b+QsTzZdfPmJN/namgvNPYPCVHKm+HPPPZdAIIDNZqO7u9tcAQdobm6msrLSjCqxWIxAIIDP5zMjwpni586dOyw1GuLz+fB4PCdrm4EB0zgOHjzI+y1yNJ7l8f/1gZe48+p5hJMJApEw4WSCoViMjCwRTacIJxOEkwnuvLqBL/zwOfOAQ+E+wVvbm+iLhPnJ2pW8F0uzP67x87tWm7XEvub+ET+sieKHhobo7u6mtraWSCRCTU0N5513HtOmTcNutzN58mSCwSAzZsygtrYWu93O2WefbU4nzxRvhNZwOEw4HGZgYMD8PhwOmyeGjJPCLpfL/P1zzxa+bxHA5bDyrz/dxP/3oSU889YRUvE4NpfTfEIyGkPXBQ6Pywz937h2AXc+8KKZNp5+eU+WvOnJrjjHrP1AP8FwwqSWdx/sYU5tWZageHlPXm0xVnxXTy8Azzfu5doVi82bNOi6zrFjx5gyZQpCCH7xi1/g8WQPdQ4NDWG1Wtm9ezczZ86koaGB8vJyJk+enB2HFuDnzZvHrl27mDlzJh6Ph66uLqZNm8b+/fuRZZmSkpI8PEB5ebnZKVksFrMXt9vtJBKJETeF/1JETaY0vvuhpYQTCSRZ4vpFU7CoEs80DXDzxbOzPfSmvVxTV0r5lEn8bmszAPd8eBm3P5Jl+ZYvnQJAxT6duoVTTW99bvMhbKqFhXMqcKYSxKzWvH2Cx154b1z4J3t6WXnhIja+8R5a+uQ6Vl1dHVarlX379uH3+2lubh7xzU6aNIne3l6mTZuGzWYjnU7j9XpN/NDQEPF4nIqKCsLhMB0dHZSUlJiniYUQtLe3k06nTXwug2qcDTSGWbmP56aB3Oj1vqeAjHErlBOFrq+6HOFxMhSKcvSon3AygWSzMBhLMdCdvbOFrunDJ27N/Ty5rZlKt4c7vv/ESQZP6FS6PUwtdXDpWTNNLqGQas7F51LTuXiAjW9kjSaczD4nHA5z/PhxrFYrbW1t7Ny5c9Q3+9Zbb7F69WqOHj3K9u3bh+GtVisDAwPIsmwWfUZ+P378OIOD2dPCufhkMmmGeIvFMuwOIRaLxSSBEolEXqrwer3vfwQwLUGWQcDvtraQTKfxlXrY0hkh1dyH3engtaNB9EQah9uJcVDRSAHTKiqZVlHJ8417ef3dziw/sK0lG+40jb5ImGf39fLlpXOH7RMYRaCBL6wPcvHrX3zHZBEbn/iBmUftdntePeLxZNe1jZM4iqIgyzJ9fX0oisL06dNJJpNs3rx5GD6RSNDV1YXX62XmzJl0dHRQUVFBeXk5wWAQm82Why8rK8PjyTfaXI838v5IkaClpeUvxABOvHlVVfnYudMJJxP86Z0ubrogy/P//o02PnZBHXZZ4YkdR0xwiduBpmls2NZELJbi0uVz+cev/4pI7CYisRjRWNr07unVXu799WtmHZBbAxj43HoAGIZvaGgw8+7e1m6TVk2n07S2tqJpGl/60pe48soriUQiZs2SyWQQQrBt27bsjR/27iWZTJobNQbe6XSaB0iam5vp6+vLnv87cABN06ivr8dutw/DG8rPDfm5R8VTqZQ5KDOeY7FY/jIigMthBSGIBaNktBwmLpf6kEDXBapVNftlWVbM/tmgkKeuuJP//P5n+Jd7fs+Pvv5xyk6cmjHy/rUF+wRGDWDgX9txkL/7h//Fq0/cw8I5FWzdfSwP/6VPns/n7v4NAIvrp7C3OXvIoqenhw984APMnTuXlpYWHnroIYQQuN3Z26VlMhmTTHK73aiqyvTp082DpQa+oqKCsrIympub8Xg8TJ8+nUwmQywWIxQKEQ6HCQQCw/DGe4pGo5SXlxMOh/NSwUj5f7SljvclAsiyTDiUJBmN8ciWZpKZDE6bjd9vayMZjWFzOXlyeztWRUVWZCQkdF0bdm4g2dZGIBKmra0Nj82OLnQzhI+2T2DgJy37HOtfvJO2tjZkVCrdnmF4xSLR0NBA24nXMW6Ddvnll3PuuecCcNlll5mbxLnj2HQ6bRqsUQ+oqjoMDzB//vwx43O93Wq1mt+n02mzIxip+vd4PKcc4vw/MwDjRGxVbRn64X6um12O6nPxX2+28/fnz6Sva5Dn9/dw21XzKHW6eGRLM8adqnInhACi5fd84qqzoPNpliyo5I8vv4fdZcvbJ2jbfZCauTOG4V969Lu8BFz5qW+ZvEA4FBuGN1KAx3YykvT19dHXd9Kodu3axZYtW/IUcfHFF7Ns2TKTiOnr62NoaAi32z0MnytGL19I5Bh4I5zndgHG83ONwePx5C3aFtYM75sBxBJpswByeFwgBCV2B1ZFxW214ambTGlXhMxgFE7c4sQ4QGnk2Oe3HhpxnyCc1NCkNPuas309kOUD+vMp0Vz8j+++Pet5sdiI+H/96UX8+MHfsqfluIm3Wq0kEgn27NnDtm3byGQyvPHGG/nFZDrNq6++yvnnn8+iRYvMs/65+MKZut1uN2/9Zniv0eIZeMMIcvv9XE4gtxgsXLr5S2gD1Sy9u5t/WzkPCYkX2oeI7+3G4Xbx2JvZaZ6syGw4PIQ4HASRLby+9fx+Yok0LoeVG65Yks2lLW1Uz55nThGff/0gdme2jzdkjlOiOSZYdcE81jdmvTkXv2rN5afFX3PNNTQ+UcvBjgHzelNTE1u3bjU9v1CM6xaLhQsuuACHw3FGfbyBN265VmhshcoeiQj6i2kD//cXruRLP9nAt65bZHLe5JzOUbOnoZDl7K1jv/3sbn70hSv51Lf+aObwfc39LKu05o2T7S4bNtWSt0JmnVrOwoLx83jxa25YlnfbtXg8zltvvcWWLVvw+Xx5FOuJGb5525dXX32VtWvXEgqFzDt6xONx04MLlWXk8cJK38AbxmGkilyuP51Om0ZldAIGxrhpxPtuAOqJcP7vX17Fv/3sJe758DJkq828NYp6ItemUmmsFgvffHYX9/3L1XlTQkNhh/YdI+3rG3aa2G63j7pPMBH8J67KPv7C5lYURcHhcJiDl6qq7K1bjQIt925dXq/XvIdPSUmJedduh8PBnj178oze+JnG55CbbgATnxv+w+GwGT1yDaiQFzCiy19EEWizKnz2e88RiSVxO23c/sg2zi1zkkxr2CxKPpMWiBGNp/jkN54yDUCWJTZsy57Xczg97NjdzQ66KS9xEY6kiMpp8/FYrDtvn0A+UUyeCT4UCnH06FHC4TDV1dVmjWKcyzdu0WbULVVVVQQCAY4ePYrFkr1b1nPPPTfMWHIlF59LnBm3lcud6iUSCaZMmTLirD53HPyXMAgqSlGK8rcuE9pGWbW8UrT3xDh4NDoqXlEUkRNCz3jr5YorrhAAL7/88ph/lvvcpXmrXJG3do8Ze+680mFrYG81BceMX7Vq1TD8hg0bpPG+31wZz3sv+eDyYfjQ6zukUYdB41H+imVltG+IcSrlT5o0CVmWUVWVY8eOiYkYQe6HkHO8S4zlg3Cfu1SEt+/KH9Cct0yMxQjOnVcqPnzRJAbDaWLJbF3gtMkAosxjYXq1g1/+6ah0KuVff/31DA4OEovFTsw+nFmCfeDt0+KvuOIK8dJLL3Ho0CGTbq6qquKOO+4QltCe0+JLPrhczH7qP0i0HiHTl72bmlpZRuddPxQXxtvz8NJElP/whmOjer+iKMKYnuXeurWnp2dMkaBQ6R/72MdM9s+4x9C6detO6Q2G8n8XP3l7tSWqm1uP7KD1U19hrEaQ+/8PzM327LWT7Kd8/6NFgOXLl2cNoecPY8IXRoBvfSvLkG5/7LNjwhdGgMlfyTrQp5+/Lw8vjUf506sdNO4eOG3or6mpwePxmJyCsZ06mhGMpPTcky+FciojMJS/Nx1hTya7Tn6zo5prA3sB2HzNreNKBbnvf2Gdm1hS5+2DQ+NKB6bz3PBVYrEYO3bsGFc6MPD//sgW/H4/3/3ud8eVDgz80Z/+gkxfgOP3rTPTgTwezz+d8nPbptz5fHl5ORaLherq6rzawFD+Rz7yEV566SVeeukl0+NHUv79999v3vGrvr6ec845R4z2O+zJRLjZUc0S1c3edIR7Pdl7Ddc/et+w2mCsxv/ctuxK2iVLfCPWCKfDP/wf/wvInlEYqUY4HX71Vdm/l/Dggw+OWCOcDq997NYs7/KDO80IoY75lx9D2FEURVRXV1NdXW2uT2uahtVqJR6Po6rZO4EFAoG8muDzn/88v/jFL7jssstGVLohixcvznvsnXfeGTX03+yo5r5oZ97jB/6wnvkfX03rGaQ9r8sijHQwEfyOHTuEkQ4mgv/ud78rjHQwEXzJfeuEkQ5OawBjyfmFkslkSCQSyLJs3onTZrORTCbRdZ14PD4i7rLLLuPVV1/lsssuO6XSgVOeBTRkbzoy6mP1j95H66e+ctqCcDzG/9eKV//cL66qqvmHk3IZL4N3dziyt37JjQJGuC8rK+Pxxx+fsNJzC76b3nuV2xqWDU8NP3nojAveEx3BxPFO5xnhc08DTwSvVpad2gAm4vm5UjjrNrjx3D+akCv/9V/ZE0Jz5sw5peJjsVhe2N+5c+eIv9vXwoepnTGDB3/7cH6KOG9plg/YvvuMPMfnsZwZ3uc7I7xx9GuieHv99NGJoLFW+6PVAGVlZWQyGWw2W95UMRaLmUMaYxhiRIArrrhCXHLJJWYBmbtPB+SNeEdTem4dcMkLv2XPTx7C95Gr8h4b/OOL+D5yFR233z1qJzAW4z93XqkYrQsYC37VqlVitC5gLPgrrrhiVC5kLPiSDy4XRheg/jk9X9M0KRAIiLKyMjRNM//MWu7wxPiTKrlF4Ik3YxrBeJVeKN2B/lEfO5X3jzXtnUr5Y8GfSvljwZ9K+WPB5zKC0p9L+YWRwBj7ut1u+vv7hxnKaJZtbMmMV+mFUaDiluvNkJ+r/P5HnhnR+8/0/f+145lb6xJza12CP5MoiiKMr/djyOE+d6kY6Wu053/uQ7Vn9P7/2vFFKUpRisLog5HxUJ8jVb3joT5Hqg3GQ32OVPWONB4tyhioYGM0ekLEuIcgJ0ajBn68QxBjNApw5ZVXivEOQYzRKEDLR/9ZjDQTn8iOwHg/h8IJ4Xg/h8Kh2Xg/h8IJ4Yht4GjK7+pPjon9Gk35XV1dY2K/RlP+5s2bx8R+jab8yJu78tiviSrfcISu7LkGMd4FEcMRTozIxXgXRAxH2Lx585j3IkZyhMibuwBE6PUdkjwW5QPEkjplHguf+1CtGK/yDSKIgbfHjM9VPmT/CIIltGfM+FzlA2T6AlwYbx8zfrQFka7+JDUVtgk5wuDgoPnn7SbiCIcOHWLz5s3k8iXj+SwSrUeIvLkL9/knKfLTurXh+YFQiroaJ427B8b14obnDwwMsHzV7ePGG56/f/9+7vrRU+PGG54fP9jG4W9+b9z4wu2g8UbCwu2g8UbCwu2g8UbCwu2gwkgojSXnlXks1NU4CYRSlJVYx7wQYea8gbdZvup2BgYGKC8vH/NChJHzLKE93PWjp9i/fz8LFiwY80KEkfMujLdz+JvfI36wDcfcWXkLEWMlWepqnDhtMj6PhWe39o5vP3B5pVi+6nacTic+n49nnnlmXDXAquWV4q4fPUVVVRUNDQ1ceeWV46oBVi2vFIe/+T3UyjLs9dNp+eg/j20h5K2moGTswL3yTj9lJdZxWd+GDRskYwfuiYd/THl5+bjwL7/8smTswP3TzdewYMGCceFDr++QjB046Y4v4Zg7i4kybK+80z9h5a9YVsYTD/94wspfsayMf7r5mgkrf8WyMqQ7vjRM+WMC/+9/ajAZpvG2g4X48baDhfjxtoOF+PG2gyO9//EaT+H7PxP8eFvhkd4/Y10LP5OpYBH/14OXix/eme9A/o/CF4aNibz4Xzv+TAYrf214qej5mNPQmdVOJjpS/WvFy8Wwl5Uz+fD/mvEmFXwm26f/E/AbdvRJBfdG+5vCF4Xi6eC/6anY36rIEx2MXLLEx0R3A66//vq8v6E3EW78wQcfZKK7AbOf+g+m/eDOovuP1wByByOn240/3WDkdLvxpxuMnG43/nSDkdzd+KIBTED54+bEC5Q/Xk68UPnj5cQLlT8uTvxv3QCKyv8bNoCi8v9GDGDBDLdYMMMtJqr8iy66SFx00UViosqfO3eumDt3rpio8u2zZwj77BmiqPwziABTJ9kxjGAinl9bW4thBBPx/MsvvxzDCCbi+Z5LzsEwgqLyJ8ADLJjhFotnedjbFuamK6eMO+xfdNFFYunSpezevZtbbrll3GF/7ty54otf/CIPPPAATU1N4w779tkzxKTPfIzeXz3Bgm1PFpV/JjXARHO+iZ9gzjdkojnfkKLyJ8gE5kYBgP0dkXF9eLlRAGDr1q3jm2rlRAGAgwcPjgufGwUAEi0dReWPdxy8ZW+AxbM8BMJpjvUmxmwEBn5foJalS5ea9+QdqxGY49xmJ1/84hfZv38/r7zyypiNwMD/pklm0mc+RvzQYcKbdxaNgDFMA0c4XiyMwhAQpzOCfPxRE28UhqczgkL8Aw88IIzCEBCnM4JcfOJoVOr91RPCKAwBUTSCUQzAqPoLx6k5ChenC/kA08uO5uENhRe2hiOF/Ozrx/LwOQoXpwv5Wbyeh89ReHFEeipZMMMtPnH55GEcwHhy/h133CFOp+hTGcDPf/7zYRzAeHJ+7Q//bRgHUJRxdAFGwTdRMQq+iYpR8E1UjIKvKEUpSlGKUpSiFKUoRSlKUYpSlKIUpShFKUpRilKUohSlKEUpSlGKUpSiFKUoRSlKUYpSlKIUpShFKUpRilKUohSlKEUpSlGKUpSiFKUoRSlKUYpSlKIU5X+i/F8Drmud9zZ+LAAAAABJRU5ErkJggg==",
+zombie:"data:image/png;base64,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",
+pig:"data:image/png;base64,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"
+};
+</script>
+<script>
+(()=>{
+// ---- mundo 256x256x64: blocos, tabelas e geração (puro JS, sem THREE)
+// blocos: 1 grama 2 terra 3 pedra 4 madeira 5 folhas 6 areia 7 tábuas 8 pedregulho 9 tijolos 10 bedrock 11 água
+//         12 carvão 13 ferro 14 diamante 15 mesa de trabalho 16 fornalha
+// itens:  100 graveto 101 carvão 102 barra de ferro 103 diamante, 110.. ferramentas (110 + tipo*4 + material)
+const W=256,H=64,D=256,SL=30,CS=16,CX=W/CS,CZ=D/CS;
+const B=new Uint8Array(W*H*D),TOP=new Uint8Array(W*D),HI=new Uint8Array(W*D),HM=new Uint8Array(W*D);
+const I=(x,y,z)=>(x*D+z)*H+y; // coluna contígua: y varia mais rápido
+// -1 abaixo do mundo, -2 fora dos lados, 0 ar, >0 bloco
+const get=(x,y,z)=>y<0?-1:(x<0||z<0||x>=W||z>=D)?-2:y>=H?0:B[I(x,y,z)];
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const GR=1,DI=2,ST=3,LG=4,LV=5,SA=6,PL=7,CB=8,BK=9,BE=10,WA=11,CO=12,FE=13,DM=14,TB=15,FU=16;
+const BNAME=['','Grama','Terra','Pedra','Madeira','Folhas','Areia','Tábuas','Pedregulho','Tijolos','Bedrock','Água','Minério de carvão','Minério de ferro','Minério de diamante','Mesa de trabalho','Fornalha'];
+const TIERN=['madeira','pedra','ferro','diamante'],KINDN=['Picareta','Machado','Pá','Espada'];
+const ITN={100:'Graveto',101:'Carvão',102:'Barra de ferro',103:'Diamante'};
+const NM=t=>t<100?BNAME[t]:ITN[t]||KINDN[(t-110)>>2]+' de '+TIERN[(t-110)&3];
+const isTool=t=>t>=110&&t<126;
+// h: dureza (valor do Minecraft), k: ferramenta certa (0 picareta, 1 machado, 2 pá, -1 nenhuma),
+// r: nível mínimo da ferramenta p/ soltar o item (-1 = qualquer), d: o que solta (0 = nada)
+const BD={
+  1:{h:.6,k:2,r:-1,d:2},2:{h:.5,k:2,r:-1,d:2},3:{h:1.5,k:0,r:0,d:8},4:{h:2,k:1,r:-1,d:4},5:{h:.2,k:-1,r:-1,d:0},
+  6:{h:.5,k:2,r:-1,d:6},7:{h:2,k:1,r:-1,d:7},8:{h:2,k:0,r:0,d:8},9:{h:2,k:0,r:0,d:9},10:{h:-1},
+  12:{h:3,k:0,r:0,d:101},13:{h:3,k:0,r:1,d:13},14:{h:3,k:0,r:2,d:103},15:{h:2.5,k:1,r:-1,d:15},16:{h:3.5,k:0,r:0,d:16}
+};
+// ladrilho de cada face: [+x,-x,+z,-z,topo,base]
+const tb=(t,s,b)=>[s,s,s,s,t,b];
+const TX={1:tb(0,1,2),2:tb(2,2,2),3:tb(3,3,3),4:tb(5,4,5),5:tb(6,6,6),6:tb(7,7,7),7:tb(8,8,8),8:tb(9,9,9),9:tb(10,10,10),10:tb(11,11,11),
+  12:tb(13,13,13),13:tb(14,14,14),14:tb(15,15,15),15:[17,17,18,18,16,8],16:[20,20,19,19,21,21]};
+const ITILE={100:24,101:25,102:26,103:27}; // ferramentas: ladrilho = id - 82
+// receitas: [estação (0 mão, 1 mesa, 2 fornalha), [[item,qtd]...], resultado, qtd]
+const RCP=[[0,[[4,1]],7,4],[0,[[7,2]],100,4],[0,[[7,4]],15,1],[0,[[8,4]],9,4],[1,[[8,8]],16,1]];
+{const MAT=[7,8,102,103],CT=[[3,2],[3,2],[1,2],[2,1]]; // picareta, machado, pá, espada: [material, gravetos]
+ for(let m=0;m<4;m++)for(let k=0;k<4;k++)RCP.push([1,[[MAT[m],CT[k][0]],[100,CT[k][1]]],110+k*4+m,1])}
+RCP.push([2,[[13,1]],102,1],[2,[[8,1]],3,1]);
+
+// ---- ruído determinístico (inteiros, para o mesmo mundo em qualquer navegador)
+function mulberry(a){return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const hash2=(x,z,s)=>{let h=Math.imul(x,374761393)+Math.imul(z,668265263)+Math.imul(s,1274126177)|0;h=Math.imul(h^h>>>13,1274126177);return((h^h>>>16)>>>0)/4294967296};
+function vnoise(x,z,s){
+  const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;
+  const u=xf*xf*xf*(xf*(xf*6-15)+10),v=zf*zf*zf*(zf*(zf*6-15)+10);
+  const a=hash2(xi,zi,s),b=hash2(xi+1,zi,s),c=hash2(xi,zi+1,s),d=hash2(xi+1,zi+1,s);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+const fbm=(x,z,s,o)=>{let a=1,f=1,t=0,n=0;for(let i=0;i<o;i++){t+=a*vnoise(x*f,z*f,s+i*101);n+=a;a*=.5;f*=2}return t/n};
+function heightAt(x,z,s){
+  const c=fbm(x/140,z/140,s,3),hl=fbm(x/46,z/46,s+7,4),mt=fbm(x/80,z/80,s+13,3);
+  let h=SL+(c-.44)*44+(hl-.5)*18;
+  const m=Math.max(0,mt-.52)/.48;
+  h+=m*m*34*cl((c-.38)*5,0,1); // montanhas só longe do mar
+  return h;
+}
+// ---- altura da coluna: TOP = bloco mais alto que tapa a luz (ignora água e folhas), HI = qualquer bloco
+function colFix(x,z){
+  const k=x*D+z,b=k*H;let y=H-1;
+  while(y>0&&!B[b+y])y--;
+  HI[k]=y;
+  while(y>0){const t=B[b+y];if(t!=WA&&t!=LV)break;y--}
+  TOP[k]=y;
+}
+const calcTop=()=>{for(let x=0;x<W;x++)for(let z=0;z<D;z++)colFix(x,z)};
+
+// ---- gerar mundo (assíncrono para a tela de carregamento poder atualizar)
+async function gen(seed,say){
+  const pause=()=>new Promise(r=>setTimeout(r,0)),s1=seed|0;
+  const note=(t,f)=>say&&say(t,f);
+  note('Relevo…',.05);await pause();
+  B.fill(0);
+  for(let x=0;x<W;x++)for(let z=0;z<D;z++){
+    const k=x*D+z,b=k*H,h=cl(Math.round(heightAt(x,z,s1)),5,H-9);
+    HM[k]=h;B[b]=BE;B.fill(ST,b+1,b+h+1);
+    if(hash2(x,z,s1+5)<.55)B[b+1]=BE;
+    if(hash2(x,z,s1+6)<.15)B[b+2]=BE;
+  }
+  note('Cavernas…',.25);await pause();
+  const cr=mulberry(s1^0x51ed270b);
+  const carve=(cx,cy,cz,r)=>{
+    const x0=Math.max(1,Math.floor(cx-r)),x1=Math.min(W-2,Math.ceil(cx+r)),z0=Math.max(1,Math.floor(cz-r)),z1=Math.min(D-2,Math.ceil(cz+r));
+    for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++){
+      const dx=x+.5-cx,dz=z+.5-cz,d2=dx*dx+dz*dz;if(d2>=r*r)continue;
+      const k=x*D+z,b=k*H,h=HM[k],lim=h<=SL+1?h-5:h; // sob o mar mantém um teto
+      for(let y=Math.max(3,Math.floor(cy-r));y<=Math.min(lim,Math.ceil(cy+r));y++){
+        const dy=(y+.5-cy)*1.3;
+        if(d2+dy*dy<r*r&&B[b+y]==ST)B[b+y]=0;
+      }
+    }
+  };
+  for(let w=0,tries=0;w<140&&tries<2000;tries++){
+    let x=cr()*W,z=cr()*D;const k0=(x|0)*D+(z|0);
+    if(HM[k0]<SL+6)continue;
+    w++;
+    let y=6+cr()*(HM[k0]-12),yaw=cr()*6.283,pit=(cr()-.5)*.5,ch=0;
+    const len=140+cr()*260,r0=1.4+cr()*1.5;
+    for(let i=0;i<len;i++){
+      yaw+=(cr()-.5)*.45;pit=cl(pit*.9+(cr()-.5)*.26,-.6,.6);
+      const cp=Math.cos(pit);
+      x+=Math.cos(yaw)*cp;z+=Math.sin(yaw)*cp;y+=Math.sin(pit);
+      if(x<2||z<2||x>W-3||z>D-3||y<3)break;
+      if(ch<=0&&cr()<.012)ch=10;
+      carve(x,y,z,r0+Math.sin(i*.11)*.5+(ch-->0?2.2:0));
+    }
+  }
+  note('Superfície…',.5);await pause();
+  for(let x=0;x<W;x++)for(let z=0;z<D;z++){
+    const k=x*D+z,b=k*H,h=HM[k],beach=h<=SL+1,rocky=h>=48+hash2(x>>2,z>>2,s1+9)*6;
+    if(B[b+h]==ST)B[b+h]=beach?SA:rocky?ST:GR;
+    const sub=beach?SA:rocky?ST:DI;
+    for(let y=h-1;y>=h-3&&y>2;y--)if(B[b+y]==ST)B[b+y]=sub;
+  }
+  note('Minérios…',.62);await pause();
+  const or=mulberry(s1^0x2f6b9c1d);
+  const vein=(id,n,y0,y1)=>{
+    let x=or()*W|0,z=or()*D|0,y=y0+(or()*(y1-y0)|0);
+    for(let i=0;i<n;i++){
+      if(x>0&&z>0&&x<W-1&&z<D-1&&y>2&&y<H){const j=I(x,y,z);if(B[j]==ST)B[j]=id}
+      const a=or()*3|0,d=or()<.5?-1:1;
+      if(a==0)x+=d;else if(a==1)y+=d;else z+=d;
+    }
+  };
+  for(let i=0;i<1500;i++)vein(CO,5+(or()*8|0),4,56);
+  for(let i=0;i<950;i++)vein(FE,3+(or()*5|0),4,40);
+  for(let i=0;i<190;i++)vein(DM,1+(or()*4|0),3,13);
+  note('Água…',.74);await pause();
+  for(let x=0;x<W;x++)for(let z=0;z<D;z++){
+    const k=x*D+z,b=k*H;
+    for(let y=SL;y>HM[k];y--)if(!B[b+y])B[b+y]=WA;
+  }
+  note('Árvores…',.84);await pause();
+  const tr=mulberry(s1^0x7a3c41e5);
+  for(let x=3;x<W-3;x++)for(let z=3;z<D-3;z++){
+    const k=x*D+z,b=k*H,h=HM[k];
+    if(h<=SL+1||h>46||B[b+h]!=GR)continue;
+    const f=fbm(x/60,z/60,s1+31,2);
+    if(tr()>=(f>.55?.03+(f-.55)*.22:.0016))continue;
+    let near=false;
+    for(let dx=-2;dx<=2&&!near;dx++)for(let dz=-2;dz<=2;dz++)if(B[(k+dx*D+dz)*H+h+1]==LG){near=true;break}
+    if(near)continue;
+    const th=4+(tr()*3|0);
+    for(let dy=th-2;dy<=th+1;dy++){
+      const rr=dy>=th?1:2;
+      for(let dx=-rr;dx<=rr;dx++)for(let dz=-rr;dz<=rr;dz++){
+        if(dy==th+1&&dx&&dz)continue;
+        if(rr==2&&Math.abs(dx)==2&&Math.abs(dz)==2&&tr()<.5)continue;
+        const j=(k+dx*D+dz)*H+h+1+dy;
+        if(!B[j])B[j]=LV;
+      }
+    }
+    for(let dy=1;dy<=th;dy++)B[b+h+dy]=LG;
+  }
+  note('Luz…',.95);await pause();
+  calcTop();
+}
+// ponto de nascimento: grama firme mais perto do centro, num espaço aberto (sem copa de árvore por perto)
+function spawnPoint(){
+  const cx=W>>1,cz=D>>1;
+  for(let r=0;r<W/2-6;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++){
+    if(Math.max(Math.abs(dx),Math.abs(dz))!=r)continue;
+    const x=cx+dx,z=cz+dz,k=x*D+z;
+    if(HM[k]<=SL+1||HI[k]!=TOP[k]||B[k*H+TOP[k]]!=GR)continue;
+    let free=true;
+    for(let a=-2;a<=2&&free;a++)for(let b=-2;b<=2;b++){const j=(x+a)*D+z+b;if(HI[j]!=TOP[j]||HM[j]<=SL){free=false;break}}
+    if(free)return[x+.5,TOP[k]+1.01,z+.5];
+  }
+  return[W/2+.5,H-2,D/2+.5];
+}
+
+// ---- cena
+const cvs=document.getElementById('c');
+const R=new THREE.WebGLRenderer({canvas:cvs});
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+const sky=getComputedStyle(document.documentElement).getPropertyValue('--sky').trim();
+const S=new THREE.Scene();
+S.background=new THREE.Color(sky);
+S.fog=new THREE.Fog(S.background,22,56);
+const cam=new THREE.PerspectiveCamera(72,1,.05,150);
+cam.rotation.order='YXZ';
+const fit=()=>{R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};
+addEventListener('resize',fit);fit();
+
+// atlas de texturas do pacote Alpha (PACK.atlas): ladrilhos 16x16 numa grade 8x8
+const TS=16,AN=8,AW=TS*AN;
+const ac=document.createElement('canvas');ac.width=ac.height=AW;
+const ag=ac.getContext('2d');
+ag.fillStyle='#888';ag.fillRect(0,0,AW,AW); // cinza só até a imagem carregar
+const tex=new THREE.CanvasTexture(ac);
+tex.magFilter=tex.minFilter=THREE.NearestFilter;
+const mat=new THREE.MeshBasicMaterial({map:tex,vertexColors:true,alphaTest:.5}); // alphaTest: folhas vazadas
+const wmat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false});
+const IC={}; // ícones: blocos isométricos e itens, gerados a partir do atlas
+const atlas=new Image();
+atlas.onload=()=>{ag.clearRect(0,0,AW,AW);ag.drawImage(atlas,0,0);tex.needsUpdate=true;makeIcons();hud();if(playing)refreshInv()};
+atlas.src=PACK.atlas;
+// UV de um ladrilho: [u0,v0,tamanho], com folga mínima para não vazar pixel do vizinho
+const tileUV=n=>{const e=.05;return[(n%AN*TS+e)/AW,1-((n/AN|0)*TS+TS-e)/AW,(TS-2*e)/AW]};
+const TUV=[];for(let n=0;n<AN*AN;n++)TUV[n]=tileUV(n);
+function makeIcons(){
+  const N=64,c=document.createElement('canvas');c.width=c.height=N;
+  const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+  const reset=()=>{x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.clearRect(0,0,N,N)};
+  const face=(n,m,dark)=>{
+    x.setTransform(...m);
+    x.globalCompositeOperation='source-over';
+    x.drawImage(ac,n%AN*TS,(n/AN|0)*TS,TS,TS,0,0,TS,TS);
+    if(dark){x.globalCompositeOperation='source-atop';x.fillStyle=`rgba(0,0,0,${dark})`;x.fillRect(0,0,TS,TS)}
+  };
+  for(const t in TX){ // bloco isométrico: esquerda = +z, direita = +x, topo
+    reset();
+    face(TX[t][2],[2,1,0,2,0,16],.22);
+    face(TX[t][0],[2,-1,0,2,32,32],.42);
+    face(TX[t][4],[2,1,-2,1,32,0],0);
+    IC[t]=c.toDataURL();
+  }
+  const sprite=n=>{reset();x.drawImage(ac,n%AN*TS,(n/AN|0)*TS,TS,TS,0,0,N,N);return c.toDataURL()};
+  for(const t in ITILE)IC[t]=sprite(ITILE[t]);
+  for(let t=110;t<126;t++)IC[t]=sprite(t-82);
+}
+
+// faces: dx,dy,dz, cantos, brilho (ordem: +x -x +z -z +y -y, igual à tabela TX)
+const F=[
+ [1,0,0,[[1,0,1],[1,0,0],[1,1,0],[1,1,1]],.8],
+ [-1,0,0,[[0,0,0],[0,0,1],[0,1,1],[0,1,0]],.8],
+ [0,0,1,[[0,0,1],[1,0,1],[1,1,1],[0,1,1]],.9],
+ [0,0,-1,[[1,0,0],[0,0,0],[0,1,0],[1,1,0]],.9],
+ [0,1,0,[[0,1,1],[1,1,1],[1,1,0],[0,1,0]],1],
+ [0,-1,0,[[0,0,0],[1,0,0],[1,0,1],[0,0,1]],.6]
+];
+const UV=[[0,0],[1,0],[1,1],[0,1]];
+
+// ---- malha por chunk (16x16 colunas): buffers de trabalho reaproveitados
+const MV=130000,WV=12000;
+const sP=new Float32Array(MV*3),sC=new Float32Array(MV*3),sU=new Float32Array(MV*2),sI=new Uint32Array(MV/4*6);
+const wP=new Float32Array(WV*3),wU=new Float32Array(WV*2),wI=new Uint32Array(WV/4*6);
+let qn=0,qi=0,wn=0,wi=0;
+const MINL=.46;
+// brilho de uma célula de ar: quanto mais abaixo do topo da coluna, mais escuro
+const lite=(k,y)=>{const d=TOP[k]-y;return d<=0?1:Math.max(MINL,1-d*.09)};
+function addQ(x,y,z,f,tn,m){
+  if(qn+4>MV)return;
+  const q=F[f][3],u=TUV[tn],o=qn*3,uo=qn*2;
+  for(let c=0;c<4;c++){
+    const v=q[c],p=o+c*3;
+    sP[p]=x+v[0];sP[p+1]=y+v[1];sP[p+2]=z+v[2];
+    sC[p]=sC[p+1]=sC[p+2]=m;
+    sU[uo+c*2]=u[0]+UV[c][0]*u[2];sU[uo+c*2+1]=u[1]+UV[c][1]*u[2];
+  }
+  sI[qi]=qn;sI[qi+1]=qn+1;sI[qi+2]=qn+2;sI[qi+3]=qn;sI[qi+4]=qn+2;sI[qi+5]=qn+3;
+  qn+=4;qi+=6;
+}
+function addW(x,y,z,f){ // água: superfície um pouco abaixo do topo do bloco
+  if(wn+4>WV)return;
+  const q=F[f][3],u=TUV[12],o=wn*3,uo=wn*2;
+  for(let c=0;c<4;c++){
+    const v=q[c],p=o+c*3;
+    wP[p]=x+v[0];wP[p+1]=y+(v[1]?.88:0);wP[p+2]=z+v[2];
+    wU[uo+c*2]=u[0]+UV[c][0]*u[2];wU[uo+c*2+1]=u[1]+UV[c][1]*(f<4?.88:1)*u[2];
+  }
+  wI[wi]=wn;wI[wi+1]=wn+1;wI[wi+2]=wn+2;wI[wi+3]=wn;wI[wi+4]=wn+2;wI[wi+5]=wn+3;
+  wn+=4;wi+=6;
+}
+function upload(old,m,P,Cc,U,IX,nv,ni){
+  if(!nv){if(old){S.remove(old);old.geometry.dispose()}return null}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(P.slice(0,nv*3),3));
+  if(Cc)g.setAttribute('color',new THREE.BufferAttribute(Cc.slice(0,nv*3),3));
+  g.setAttribute('uv',new THREE.BufferAttribute(U.slice(0,nv*2),2));
+  g.setIndex(new THREE.BufferAttribute(IX.slice(0,ni),1));
+  if(old){old.geometry.dispose();old.geometry=g;return old}
+  const me=new THREE.Mesh(g,m);S.add(me);return me;
+}
+const CK=[]; // chunk -> {o: malha opaca, w: malha da água}
+function buildChunk(i){
+  const cx=(i/CZ)|0,cz=i%CZ,x0=cx*CS,z0=cz*CS;
+  qn=qi=wn=wi=0;
+  for(let x=x0;x<x0+CS;x++)for(let z=z0;z<z0+CS;z++){
+    const k=x*D+z,b=k*H,top=HI[k];
+    for(let y=0;y<=top;y++){
+      const t=B[b+y];if(!t)continue;
+      if(t==WA){
+        for(let f=0;f<6;f++){const q=F[f];if(get(x+q[0],y+q[1],z+q[2])===0)addW(x,y,z,f)}
+        continue;
+      }
+      const tx=TX[t],r=1+(((x*73856093^y*19349663^z*83492791)>>>0)%1000/1000-.5)*.06;
+      for(let f=0;f<6;f++){
+        const q=F[f],nx=x+q[0],ny=y+q[1],nz=z+q[2],nb=get(nx,ny,nz);
+        if(nb<0||(nb>0&&nb!=WA&&nb!=LV))continue; // folhas e água não escondem as faces vizinhas
+        addQ(x,y,z,f,tx[f],q[4]*r*(ny>=H?1:lite(nx*D+nz,ny)));
+      }
+    }
+  }
+  const c=CK[i]||(CK[i]={o:null,w:null});
+  c.o=upload(c.o,mat,sP,sC,sU,sI,qn,qi);
+  c.w=upload(c.w,wmat,wP,null,wU,wI,wn,wi);
+}
+function drop(i){
+  const c=CK[i];if(!c)return;
+  for(const m of [c.o,c.w])if(m){S.remove(m);m.geometry.dispose()}
+  CK[i]=undefined;
+}
+// quais chunks existem: os que estão perto do jogador, do mais perto para o mais longe
+let VIEW=56,todo=[],pcx=-99,pcz=-99,pv=0;
+function plan(){
+  pcx=Math.floor(P.x/CS);pcz=Math.floor(P.z/CS);pv=VIEW;todo=[];
+  for(let i=0;i<CX*CZ;i++){
+    const d=Math.hypot(((i/CZ)|0)*CS+CS/2-P.x,i%CZ*CS+CS/2-P.z);
+    if(d>VIEW+CS*1.8){if(CK[i])drop(i)}
+    else if(!CK[i]&&d<VIEW+CS*.9)todo.push([d,i]);
+  }
+  todo.sort((a,b)=>b[0]-a[0]);
+}
+function pump(ms){
+  if(Math.floor(P.x/CS)!=pcx||Math.floor(P.z/CS)!=pcz||VIEW!=pv)plan();
+  const t0=performance.now();
+  while(todo.length){const i=todo.pop()[1];if(!CK[i])buildChunk(i);if(performance.now()-t0>ms)break}
+}
+function prime(n){plan();while(n-->0&&todo.length){const i=todo.pop()[1];if(!CK[i])buildChunk(i)}}
+function resetChunks(){for(let i=0;i<CX*CZ;i++)drop(i);todo=[];pcx=-99}
+// trocar um bloco: só o chunk dele e os vizinhos (por causa da luz) são refeitos
+const EDIT=new Map();
+function setBlock(x,y,z,t){
+  const j=I(x,y,z);B[j]=t;EDIT.set(j,t);colFix(x,z);
+  const xs=new Set([(x-1)>>4,(x+1)>>4]),zs=new Set([(z-1)>>4,(z+1)>>4]);
+  for(const cx of xs)for(const cz of zs){
+    if(cx<0||cz<0||cx>=CX||cz>=CZ)continue;
+    const i=cx*CZ+cz;if(CK[i])buildChunk(i);
+  }
+}
+const hl=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01,1.01,1.01)),new THREE.LineBasicMaterial({color:0x000000}));
+hl.visible=false;S.add(hl);
+
+// ---- estado do jogo
+const el=id=>document.getElementById(id);
+let creative=false,inv={},seen={},fuel=0,hp=20,SEED=1,mode=0,playing=false,ui=true,fly=false,brk=false,dn=false,tgt=null,fallY=0,lastSp=0,lw=0,sprint=false,prog=0,tm=.1,dbg=false,fps=60,sel=0,busy=false,ug=0;
+const HOT=[0,0,0,0,0,0,0,0,0];
+
+// ---- jogador
+const P={x:W/2+.5,y:40,z:D/2+.5,vy:0,yaw:0,pitch:0,ground:false};
+const hit=()=>{
+  for(let x=Math.floor(P.x-.3);x<=Math.floor(P.x+.3);x++)
+  for(let y=Math.floor(P.y);y<=Math.floor(P.y+1.8);y++)
+  for(let z=Math.floor(P.z-.3);z<=Math.floor(P.z+.3);z++)
+    {const v=get(x,y,z);if(v!==0&&v!==WA)return true}
+  return false;
+};
+const step=(a,d)=>{P[a]+=d;if(hit()){P[a]-=d;return true}return false};
+const canStep=(dx,dz)=>{P.y+=1.02;P.x+=dx;P.z+=dz;const ok=!hit();P.y-=1.02;P.x-=dx;P.z-=dz;return ok};
+
+// ---- raycast de voxels
+function ray(){
+  const ox=P.x,oy=P.y+1.62,oz=P.z,cp=Math.cos(P.pitch);
+  const dx=-Math.sin(P.yaw)*cp,dy=Math.sin(P.pitch),dz=-Math.cos(P.yaw)*cp;
+  let x=Math.floor(ox),y=Math.floor(oy),z=Math.floor(oz),n=[0,0,0],t=0;
+  const sx=Math.sign(dx),sy2=Math.sign(dy),sz=Math.sign(dz);
+  const ax=Math.abs(1/dx),ay=Math.abs(1/dy),az=Math.abs(1/dz);
+  let tx=(sx>0?x+1-ox:ox-x)*ax,ty=(sy2>0?y+1-oy:oy-y)*ay,tz=(sz>0?z+1-oz:oz-z)*az;
+  while(t<6){
+    const v=get(x,y,z);
+    if(v>0&&v!=WA)return{x,y,z,n};
+    if(v<-1)return;
+    if(tx<ty&&tx<tz){x+=sx;t=tx;tx+=ax;n=[-sx,0,0]}
+    else if(ty<tz){y+=sy2;t=ty;ty+=ay;n=[0,-sy2,0]}
+    else{z+=sz;t=tz;tz+=az;n=[0,0,-sz]}
+  }
+}
+
+// ---- inventário: quantidades por item; a barra guarda só quais itens aparecem em cada espaço
+const own=t=>inv[t]||0;
+function give(t,n=1){
+  inv[t]=own(t)+n;seen[t]=1;
+  if(!HOT.includes(t)){const i=HOT.indexOf(0);if(i>=0)HOT[i]=t}
+  hud();
+}
+function take(t,n=1){ // zerou: o item some do inventário e o espaço da barra fica livre
+  const r=own(t)-n;
+  if(r>0)inv[t]=r;
+  else{delete inv[t];for(let i=0;i<9;i++)if(HOT[i]==t)HOT[i]=0}
+  hud();
+}
+// melhor ferramenta do tipo (0 picareta, 1 machado, 2 pá, 3 espada) que o jogador tem: -1 = nenhuma
+const tier=k=>{for(let r=3;r>=0;r--)if(own(110+k*4+r))return r;return-1};
+const canHarvest=t=>{const d=BD[t];return d.r<0||(d.k>=0&&tier(d.k)>=d.r)};
+const MINE=.8;
+function bTime(t){ // segundos para quebrar (fórmula do Minecraft)
+  const d=BD[t];if(!d||d.h<0)return Infinity;
+  const tr=d.k>=0?tier(d.k):-1;
+  return d.h*(canHarvest(t)?1.5:5)/(tr>=0?[2,4,6,8][tr]:1)*MINE;
+}
+function mine(x,y,z,t){
+  setBlock(x,y,z,0);
+  if(creative)return;
+  const d=BD[t];if(d.d&&canHarvest(t))give(d.d,1);
+}
+function needHint(t){
+  const d=BD[t];
+  if(d.r>=0&&!canHarvest(t))label('Precisa de '+NM(110+d.k*4+d.r).toLowerCase()+' ou melhor');
+}
+function act(place){
+  const r=ray();if(!r||!place)return;
+  const b=B[I(r.x,r.y,r.z)];
+  if(!creative&&!K.ShiftLeft&&(b==TB||b==FU)){openInv(b==TB?1:2);return}
+  const x=r.x+r.n[0],y=r.y+r.n[1],z=r.z+r.n[2],t=HOT[sel];
+  if(!t||t>=100||y>=H||y<1)return;
+  const c=get(x,y,z);if(c!==0&&c!==WA)return;
+  if(x+1>P.x-.3&&x<P.x+.3&&y+1>P.y&&y<P.y+1.8&&z+1>P.z-.3&&z<P.z+.3)return;
+  if(!creative&&!own(t))return;
+  setBlock(x,y,z,t);
+  if(!creative)take(t,1);
+}
+
+// ---- barra de itens
+const bar=el('bar');
+HOT.forEach((_,i)=>{const d=document.createElement('div');d.className='slot';d.onpointerdown=()=>pick(i);bar.append(d)});
+const pick=i=>{sel=i;hud(1)};
+
+// ---- entrada
+const K={},J={x:0,y:0};
+let jh=false,sId=null,lId=null,s0,l0;
+const touch=matchMedia('(hover:none)').matches;
+const stk=el('stick'),knob=el('knob');
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  K[e.code]=1;const m=/^Digit([1-9])$/.exec(e.code);if(m&&playing&&!ui)pick(m[1]-1);
+});
+addEventListener('keyup',e=>{K[e.code]=0});
+addEventListener('wheel',e=>{if(playing&&!ui)pick((sel+(e.deltaY>0?1:8))%9)});
+addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('mousemove',e=>{
+  if(document.pointerLockElement){P.yaw-=e.movementX*.0022;P.pitch=cl(P.pitch-e.movementY*.0022,-1.55,1.55)}
+});
+addEventListener('pointerdown',e=>{
+  if(e.target.closest('.ui'))return;
+  if(e.pointerType==='mouse'){
+    if(!document.pointerLockElement)lock();else if(e.button==2)act(true);else brk=true;
+    return;
+  }
+  if(e.clientX<innerWidth/2&&sId==null){
+    sId=e.pointerId;s0={x:e.clientX,y:e.clientY};
+    stk.style.cssText=`display:block;left:${e.clientX}px;top:${e.clientY}px`;
+    knob.style.transform='';
+  }else if(lId==null){lId=e.pointerId;l0={x:e.clientX,y:e.clientY}}
+});
+addEventListener('pointermove',e=>{
+  if(e.pointerId===sId){
+    J.x=cl((e.clientX-s0.x)/45,-1,1);J.y=cl((e.clientY-s0.y)/45,-1,1);
+    knob.style.transform=`translate(${J.x*38}px,${J.y*38}px)`;
+  }else if(e.pointerId===lId){
+    P.yaw-=(e.clientX-l0.x)*.005;
+    P.pitch=cl(P.pitch-(e.clientY-l0.y)*.005,-1.55,1.55);
+    l0={x:e.clientX,y:e.clientY};
+  }
+});
+const up=e=>{if(e.pointerType==='mouse')brk=false;
+  if(e.pointerId===sId){sId=null;J.x=J.y=0;stk.style.display='none'}
+  if(e.pointerId===lId)lId=null;
+};
+addEventListener('pointerup',up);addEventListener('pointercancel',up);
+el('brk').onpointerdown=e=>{e.preventDefault();brk=true};
+el('brk').onpointerup=el('brk').onpointercancel=()=>{brk=false};
+el('plc').onpointerdown=e=>{e.preventDefault();act(true)};
+el('jump').onpointerdown=e=>{e.preventDefault();jh=true;tapJump()};
+el('jump').onpointerup=el('jump').onpointercancel=()=>{jh=false};
+const lock=()=>{try{const p=cvs.requestPointerLock?.();p&&p.catch&&p.catch(()=>{})}catch(e){}}; // o navegador recusa pedidos repetidos: ignorar
+let plX=0; // instante em que nós mesmos soltamos o mouse (abrir inventário): não conta como Esc
+document.addEventListener('pointerlockchange',()=>{if(!touch&&!document.pointerLockElement&&playing&&!ui&&!busy&&performance.now()-plX>600)show('pause')});
+
+// ---- jogo: telas, modos, mundo, salvar
+const NIGHT=new THREE.Color(0x070b1c),DAY=new THREE.Color(0x8fcbf2),CAVE=new THREE.Color(0x07090f),KEY='minicraft.save.v2';
+const DS=[[30,'Curta'],[56,'Normal'],[90,'Longa']],FV=[60,72,90,110];
+const CRH=[1,2,3,4,7,8,9,15,16],CRE=[1,2,3,4,5,6,7,8,9,12,13,14,15,16]; // criativo: barra inicial e blocos disponíveis
+let cur='main',prev='main',di=1,fi=1,rg=0,cool=0,bk='',stn=0,SPAWN=[W/2+.5,40,D/2+.5],ready=false,boot=null;
+const pause=()=>new Promise(r=>setTimeout(r,0));
+const hasSave=()=>{try{return!!localStorage.getItem(KEY)}catch(e){return false}};
+const menu=el('menu');
+function show(id){
+  if(id=='back')id=prev;
+  if(id&&id!=cur)prev=cur;
+  cur=id;ui=!!id;menu.style.display=id?'flex':'none';
+  if(id&&document.pointerLockElement){plX=performance.now();document.exitPointerLock()} // menu aberto: o mouse precisa ficar livre
+  ['main','new','opt','pause','dead','help'].forEach(s=>{el('s-'+s).hidden=s!=id});
+  if(id=='main')el('cont').disabled=!hasSave();
+}
+function label(s){const n=el('nm');n.textContent=s;n.style.animation='none';void n.offsetWidth;n.style.animation='fade 2.4s forwards'}
+const GOALS=[
+  [4,'Soque uma árvore: segure o clique (ou ⛏️) no tronco para pegar madeira'],
+  [7,'Abra o inventário (E ou 🎒) e transforme a madeira em tábuas'],
+  [15,'Faça uma mesa de trabalho (4 tábuas)'],
+  [110,'Coloque a mesa, toque nela (botão direito ou 🧱) e faça uma picareta de madeira'],
+  [8,'Use a picareta para quebrar pedra e pegar pedregulho'],
+  [111,'Na mesa, faça uma picareta de pedra'],
+  [16,'Na mesa, faça uma fornalha (8 pedregulhos) e coloque no chão'],
+  [13,'Ache minério de ferro em cavernas e encostas (pede picareta de pedra)'],
+  [102,'Toque na fornalha e derreta o minério de ferro (gasta carvão)'],
+  [112,'Na mesa, faça uma picareta de ferro'],
+  [103,'Procure diamantes bem fundo (y de 3 a 13), nas cavernas ou cavando']
+];
+// objetivo atual: o passo seguinte ao mais avançado que o jogador já alcançou
+const goalText=()=>{
+  if(creative)return'';
+  let k=-1;GOALS.forEach(([t],i)=>{if(seen[t])k=i});
+  return k+1<GOALS.length?GOALS[k+1][1]:'Missão cumprida! Explore, construa e enfrente os zumbis.';
+};
+function hud(l){
+  [...bar.children].forEach((d,i)=>{
+    const t=HOT[i];
+    d.style.backgroundImage=t&&IC[t]?`url(${IC[t]})`:'none';
+    d.textContent=t&&!creative&&inv[t]>1?inv[t]:'';
+    d.classList.toggle('on',i==sel);
+  });
+  el('hp').innerHTML=creative?'':Array.from({length:10},(_,i)=>`<b class="${hp>i*2+1?'':hp>i*2?'h':'e'}">♥</b>`).join('');
+  el('goal').textContent=goalText();
+  if(l){const t=HOT[sel];label(t?NM(t):'')}
+}
+function hurt(n){hp=Math.max(0,hp-n);hud();if(!hp){show('dead');document.exitPointerLock?.()}}
+function land(){if(get(Math.floor(P.x),Math.floor(P.y+.6),Math.floor(P.z))==WA){fallY=P.y;return}const d=fallY-P.y;if(!creative&&d>3)hurt(Math.floor(d-3));fallY=P.y}
+function place(sp){P.x=sp[0];P.y=sp[1];P.z=sp[2];P.vy=0;P.yaw=P.pitch=0;while(hit()&&P.y<H)P.y+=1;fallY=P.y}
+function start(){playing=true;fly=false;el('dn').hidden=true;document.body.classList.add('play');show(null);hud(1);if(!touch)lock()}
+
+// ---- criar / carregar mundo (a geração é em etapas, com tela de carregamento)
+const say=(t,f)=>{el('gt').textContent=t;el('gb').style.width=f*100+'%'};
+const genOn=v=>{el('gen').style.display=v?'flex':'none'};
+async function makeWorld(seed,ed,quiet){
+  busy=true;if(!quiet)genOn(true);
+  clrMobs();
+  await gen(seed,quiet?null:say);
+  SEED=seed;EDIT.clear();
+  if(ed){let p=0;for(let i=0;i<ed.ei.length;i++){p+=ed.ei[i];B[p]=ed.ev[i];EDIT.set(p,ed.ev[i])}calcTop()}
+  resetChunks();SPAWN=spawnPoint();
+}
+async function enter(){ // depois que o mundo e a posição estão prontos
+  if(!playing){say('Construindo…',.97);await pause()}
+  prime(30);genOn(false);busy=false;start();
+}
+async function newWorld(){
+  if(boot)await boot;
+  if(busy)return;
+  const v=el('seed').value.trim();
+  let seed=v?(/^-?\d+$/.test(v)?Math.abs(+v):[...v].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7)):Math.random()*1e9;
+  seed=Math.abs(Math.floor(seed))%2147483647;
+  try{
+    await makeWorld(seed);
+    creative=mode==1;hp=20;inv={};seen={};fuel=0;tm=.1;sel=0;rg=0;
+    HOT.fill(0);if(creative)HOT.splice(0,9,...CRH);
+    place(SPAWN);
+    await enter();
+    if(!creative)label('Soque uma árvore para pegar madeira');
+  }catch(e){genOn(false);busy=false;show('main');throw e}
+}
+function save(){
+  if(!playing||busy)return;
+  try{
+    const ks=[...EDIT.keys()].sort((a,b)=>a-b),ei=[],ev=[];let p=0;
+    for(const k of ks){ei.push(k-p);p=k;ev.push(EDIT.get(k))}
+    localStorage.setItem(KEY,JSON.stringify({s:SEED,c:creative,ei,ev,p:[P.x,P.y,P.z,P.yaw,P.pitch],sp:SPAWN,h:HOT,v:inv,sn:seen,fu:fuel,hp:hp||20,tm}));
+  }catch(e){}
+}
+async function load(){
+  if(boot)await boot;
+  if(busy)return;
+  let d=null;try{d=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(!d||!d.ei){show('main');return}
+  try{
+    await makeWorld(d.s,d);
+    creative=!!d.c;inv=d.v||{};seen=d.sn||{};fuel=d.fu||0;hp=d.hp||20;tm=d.tm??.1;sel=0;rg=0;
+    if(d.sp)SPAWN=d.sp;
+    HOT.fill(0);HOT.splice(0,9,...d.h);
+    [P.x,P.y,P.z,P.yaw,P.pitch]=d.p;P.vy=0;fallY=P.y;
+    await enter();
+  }catch(e){genOn(false);busy=false;show('main');throw e}
+}
+
+// ---- inventário, mesa de trabalho e fornalha
+const icon=t=>`<span class="ic" style="background-image:url(${IC[t]||''})"></span>`;
+function setHot(t){ // põe o item no espaço selecionado da barra (troca de lugar se já estiver em outro)
+  const j=HOT.indexOf(t);
+  if(j>=0&&j!=sel)HOT[j]=HOT[sel];
+  HOT[sel]=t;hud(1);
+}
+function craft(r){
+  if(r[0]==2){if(fuel<=0){if(!own(101))return;take(101,1);fuel=8}fuel--}
+  r[1].forEach(([t,n])=>take(t,n));
+  give(r[2],r[3]);
+  renderInv();
+}
+function renderInv(){
+  el('it').textContent=creative?'Inventário criativo':['Inventário','Mesa de trabalho','Fornalha'][stn];
+  const g=el('ig');g.innerHTML='';
+  const ids=creative?CRE:Object.keys(inv).map(Number).sort((a,b)=>a-b);
+  if(!ids.length)g.innerHTML='<p class="em">Nada por aqui ainda. Soque uma árvore!</p>';
+  for(const t of ids){
+    const d=document.createElement('div');d.className='cell';d.style.backgroundImage=`url(${IC[t]||''})`;
+    d.innerHTML=(!creative&&inv[t]>1?`<i>${inv[t]}</i>`:'')+`<span>${NM(t)}</span>`;
+    d.onclick=()=>setHot(t);
+    g.append(d);
+  }
+  const rc=el('rc');rc.innerHTML='';
+  el('fu').textContent=creative?'':stn==2?`Combustível: ${fuel} · cada carvão rende 8 fusões · Carvão: ${own(101)}`:stn==0?'Ferramentas e fornalha: coloque uma mesa de trabalho no chão e toque nela (botão direito ou 🧱).':'';
+  if(creative)return;
+  RCP.filter(r=>stn==2?r[0]==2:r[0]<=stn).forEach(r=>{
+    const b=document.createElement('button');b.className='rb';
+    b.disabled=!(r[1].every(([t,n])=>own(t)>=n)&&(r[0]!=2||fuel>0||own(101)>0));
+    b.innerHTML=`${icon(r[2])}<b>${r[3]>1?r[3]+' ':''}${NM(r[2])}</b><small>${r[1].map(([t,n])=>`${n}${icon(t)}`).join(' ')}</small>`;
+    b.onclick=()=>craft(r);
+    rc.append(b);
+  });
+}
+const refreshInv=()=>{if(!el('inv').hidden)renderInv()};
+function openInv(s=0){
+  if(!playing||ui)return;
+  stn=s;ui=true;brk=false;K.KeyW=K.KeyA=K.KeyS=K.KeyD=0;
+  plX=performance.now();document.exitPointerLock?.();renderInv();el('inv').hidden=false;
+}
+function closeInv(){el('inv').hidden=true;ui=false;if(!touch)lock()}
+function tapJump(){const n=performance.now();if(creative&&n-lastSp<300){fly=!fly;P.vy=0;el('dn').hidden=!fly}lastSp=n}
+el('ic').onclick=closeInv;
+el('bpause').onclick=()=>{if(playing&&!ui)show('pause')};
+el('binv').onclick=()=>{if(el('inv').hidden)openInv(0);else closeInv()};
+el('dn').onpointerdown=e=>{e.preventDefault();dn=true};
+el('dn').onpointerup=el('dn').onpointercancel=()=>{dn=false};
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='F3'){e.preventDefault();dbg=!dbg;el('dbg').hidden=!dbg}
+  if(!playing||busy)return;
+  if(e.code==='KeyE'&&!e.repeat){if(el('inv').hidden)openInv(0);else closeInv()}
+  if(e.code==='Escape'&&!el('inv').hidden)closeInv();
+  if(e.code==='Space'&&!e.repeat&&!ui)tapJump();
+  if(e.code==='KeyW'&&!e.repeat){const n=performance.now();if(n-lw<300)sprint=true;lw=n}
+});
+addEventListener('keyup',e=>{if(e.code==='KeyW')sprint=false});
+menu.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  const g=b.dataset.go,a=b.dataset.do;
+  if(g)show(g);
+  if(a=='mode'){mode^=1;b.textContent='Modo de jogo: '+(mode?'Criativo':'Sobrevivência')}
+  if(a=='dist'){di=(di+1)%3;VIEW=DS[di][0];b.textContent='Distância de visão: '+DS[di][1]}
+  if(a=='fov'){fi=(fi+1)%4;cam.fov=FV[fi];cam.updateProjectionMatrix();b.textContent='Campo de visão: '+FV[fi]}
+  if(a=='dbg'){dbg=!dbg;el('dbg').hidden=!dbg;b.textContent='Mostrar coordenadas: '+(dbg?'Sim':'Não')}
+  if(a=='new')newWorld();
+  if(a=='load')load();
+  if(a=='resume'){show(null);if(!touch)lock()}
+  if(a=='respawn'){hp=20;place(SPAWN);fly=false;clrMobs();hud(1);show(null);if(!touch)lock()}
+  if(a=='quit'){save();clrMobs();playing=false;brk=false;hl.visible=false;document.body.classList.remove('play');document.exitPointerLock?.();show('main')}
+});
+
+// ---- quadro a quadro
+function frame(dt){
+  if(dt>0)fps+=(1/dt-fps)*.1;
+  if(playing&&!ui&&!busy){
+    tick(dt);
+    if(P.ground||fly)fallY=P.y;else if(P.y>fallY)fallY=P.y;
+    cool-=dt;
+    const am=brk?aim():null;if(am&&cool<=0){cool=.5;atk(am)}
+    const t=am?0:(tgt?B[I(tgt.x,tgt.y,tgt.z)]:0);
+    if(brk&&t&&BD[t]&&BD[t].h>=0){
+      const key=tgt.x+','+tgt.y+','+tgt.z;
+      if(key!==bk){bk=key;prog=0;if(!creative)needHint(t)}
+      if(cool<=0){
+        prog+=dt/(creative?.01:bTime(t));
+        if(prog>=1){mine(tgt.x,tgt.y,tgt.z,t);cool=.2;prog=0;bk=''}
+      }
+    }else{prog=0;bk=''}
+    rg+=dt;if(!creative&&hp<20&&rg>4){hp++;rg=0;hud()}
+    tm=(tm+dt/240)%1;
+  }else if(!playing&&ready&&!busy){ // fundo do título: a câmera gira sobre o mundo
+    const a=performance.now()/9000,cx=W/2,cz=D/2,ty=TOP[(cx|0)*D+(cz|0)];
+    P.x=cx;P.z=cz;
+    cam.position.set(cx+Math.cos(a)*34,ty+24,cz+Math.sin(a)*34);cam.lookAt(cx,ty-3,cz);
+  }
+  if(ready&&!busy)pump(playing?4:10);
+  const dl=cl(.5+Math.sin(tm*6.2832)*.8,0,1);
+  if(playing&&!ui&&!busy)mobs(dt,dl);
+  // subsolo: o brilho vem só da luz "pintada" nos blocos, e a névoa fecha
+  const depth=playing?TOP[cl(Math.floor(P.x),0,W-1)*D+cl(Math.floor(P.z),0,D-1)]-(P.y+1.6):-99;
+  ug+=(cl((depth-1.5)/4,0,1)-ug)*Math.min(1,dt*3);
+  const sv=.3+.7*dl,v=sv+(1-sv)*ug;
+  mat.color.setRGB(v,v,v);wmat.color.setRGB(v,v,v);
+  S.background.copy(NIGHT).lerp(DAY,dl).lerp(CAVE,ug*.96);S.fog.color.copy(S.background);
+  S.fog.far=VIEW*(1-.35*ug);S.fog.near=S.fog.far*.4;
+  el('wt').style.display=playing&&get(Math.floor(P.x),Math.floor(P.y+1.62),Math.floor(P.z))==WA?'block':'none';
+  const pb=el('pb');pb.style.display=prog>0?'block':'none';pb.firstChild.style.width=prog*100+'%';
+  if(dbg)el('dbg').textContent=`Minicraft 2.0\n${fps|0} fps\nXYZ: ${P.x.toFixed(1)} / ${P.y.toFixed(1)} / ${P.z.toFixed(1)}\nSemente: ${SEED}\nModo: ${creative?'Criativo':'Sobrevivência'}\nHora: ${(tm*24)|0}h\nChunks: ${CK.filter(Boolean).length}`;
+}
+
+// ---- mobs: zumbis à noite e em cavernas, porcos de dia
+const MB=[],SZ={z:[.3,1.8],p:[.4,.9]};
+// skins do pacote (64x32) e caixas com o mapeamento de UV do Minecraft
+const skinMat=(src,cor)=>{
+  const c=document.createElement('canvas');c.width=64;c.height=32;
+  const g=c.getContext('2d');g.fillStyle=cor;g.fillRect(0,0,64,32);
+  const t=new THREE.CanvasTexture(c);t.magFilter=t.minFilter=THREE.NearestFilter;
+  const im=new Image();im.onload=()=>{g.clearRect(0,0,64,32);g.drawImage(im,0,0);t.needsUpdate=true};im.src=src;
+  return new THREE.MeshBasicMaterial({map:t,alphaTest:.5});
+};
+const SK={z:skinMat(PACK.zombie,'#5a9a3a'),p:skinMat(PACK.pig,'#f0a0a8')};
+const GEO={};
+// caixa w×h×d (em pixels da skin) com a textura começando em (u,v); mir=1 espelha (membros esquerdos)
+function skinBox(w,h,d,u,v,mir){
+  const key=[w,h,d,u,v,mir].join(),hit=GEO[key];if(hit)return hit;
+  const g=new THREE.BoxGeometry(w/16,h/16,d/16),uv=g.attributes.uv;
+  const R={dir:[u,v+d,d,h],fre:[u+d,v+d,w,h],esq:[u+d+w,v+d,d,h],tra:[u+d+w+d,v+d,w,h],top:[u+d,v,w,d],bas:[u+d+w,v,w,d]};
+  // ordem das faces no BoxGeometry: +x (esquerda do mob), -x (direita), +y, -y, +z (frente), -z (costas)
+  const faces=mir?[R.dir,R.esq,R.top,R.bas,R.fre,R.tra]:[R.esq,R.dir,R.top,R.bas,R.fre,R.tra];
+  faces.forEach(([x,y,fw,fh],i)=>{
+    let x0=x,x1=x+fw,y0=y,y1=y+fh;
+    if(mir)[x0,x1]=[x1,x0];
+    if(i==3)[y0,y1]=[y1,y0];
+    [[x0,y0],[x1,y0],[x0,y1],[x1,y1]].forEach(([a,b],j)=>uv.setXY(i*4+j,a/64,1-b/32));
+  });
+  return GEO[key]=g;
+}
+function clrMobs(){MB.splice(0).forEach(m=>S.remove(m.g))}
+const mhit=m=>{
+  const [hw,h]=SZ[m.t];
+  for(let x=Math.floor(m.x-hw);x<=Math.floor(m.x+hw);x++)
+  for(let y=Math.floor(m.y);y<=Math.floor(m.y+h);y++)
+  for(let z=Math.floor(m.z-hw);z<=Math.floor(m.z+hw);z++){const v=get(x,y,z);if(v!==0&&v!==WA)return true}
+  return false;
+};
+const mstep=(m,a,d)=>{m[a]+=d;if(mhit(m)){m[a]-=d;return true}return false};
+function spawnMob(t,cave){
+  let x,y,z,found=false; // y = altura dos pés; em caverna tenta várias posições (a maioria é rocha)
+  for(let i=0;i<(cave?14:1)&&!found;i++){
+    const a=Math.random()*6.283,r=cave?7+Math.random()*12:12+Math.random()*10;
+    x=Math.floor(P.x+Math.cos(a)*r);z=Math.floor(P.z+Math.sin(a)*r);
+    if(x<2||z<2||x>=W-2||z>=D-2)continue;
+    if(cave){ // célula de ar escura, bem abaixo da superfície, com chão firme
+      y=Math.floor(P.y+(Math.random()-.5)*14);
+      if(y<4||y>=H-3||TOP[x*D+z]-y<4)continue;
+      const g=get(x,y-1,z);
+      if(get(x,y,z)!==0||get(x,y+1,z)!==0||g<=0||g==WA)continue;
+    }else{
+      y=HI[x*D+z];const b=B[I(x,y,z)];
+      if(b==WA||b==LV||(t=='p'&&b!=GR))continue;
+      y++;
+      if(B[I(x,y,z)]||B[I(x,y+1,z)])continue;
+    }
+    found=true;
+  }
+  if(!found)return;
+  const g=new THREE.Group();
+  const part=(w,h,d,u,v,mir,px,py,pz,rx)=>{const m=new THREE.Mesh(skinBox(w,h,d,u,v,mir),SK[t]);m.position.set(px,py,pz);if(rx)m.rotation.x=rx;g.add(m)};
+  if(t=='z'){ // zumbi (medidas do modelo do Minecraft, pés em y=0)
+    part(8,8,8,0,0,0,0,1.75,0);                       // cabeça
+    part(8,12,4,16,16,0,0,1.125,0);                   // corpo
+    part(4,12,4,40,16,0,-.375,1.375,.25,-Math.PI/2);  // braço direito, esticado
+    part(4,12,4,40,16,1,.375,1.375,.25,-Math.PI/2);   // braço esquerdo
+    part(4,12,4,0,16,0,-.125,.375,0);                 // perna direita
+    part(4,12,4,0,16,1,.125,.375,0);                  // perna esquerda
+    g.scale.setScalar(.9375);
+  }else{ // porco
+    part(10,16,8,28,8,0,0,.625,0,Math.PI/2);          // corpo, deitado
+    part(8,8,8,0,0,0,0,.75,.625);                     // cabeça
+    part(4,3,1,16,16,0,0,.656,.906);                  // focinho
+    for(const [lx,lz] of [[-.1875,-.4375],[.1875,-.4375],[-.1875,.3125],[.1875,.3125]])part(4,6,4,0,16,0,lx,.1875,lz); // pernas
+  }
+  g.position.set(x+.5,y,z+.5);S.add(g);
+  MB.push({g,t,cave:!!cave,x:x+.5,y,z:z+.5,vy:0,hp:t=='z'?10:6,yaw:0,ai:0,go:0,kx:0,kz:0,cd:0,burn:0,on:false});
+}
+function aim(){
+  const cp=Math.cos(P.pitch),dx=-Math.sin(P.yaw)*cp,dy=Math.sin(P.pitch),dz=-Math.cos(P.yaw)*cp;
+  let best=null,bd=4.2;
+  for(const m of MB){
+    const vx=m.x-P.x,vy=m.y+.9-(P.y+1.62),vz=m.z-P.z,d=Math.hypot(vx,vy,vz);
+    if(d<bd&&(vx*dx+vy*dy+vz*dz)/d>.93){best=m;bd=d}
+  }
+  return best;
+}
+function atk(m){
+  const sw=tier(3); // espada: a melhor que tiver
+  m.hp-=creative?99:sw>=0?[4,5,6,7][sw]:2;
+  const d=Math.hypot(m.x-P.x,m.z-P.z)||1;
+  m.kx=(m.x-P.x)/d*7;m.kz=(m.z-P.z)/d*7;m.vy=4;
+  if(m.hp<=0){S.remove(m.g);MB.splice(MB.indexOf(m),1)}
+}
+function mobs(dt,dl){
+  const ty=dl<.45?'z':'p';
+  if(!creative){
+    if(ug<.5&&MB.filter(m=>m.t==ty&&!m.cave).length<5&&Math.random()<dt*.6)spawnMob(ty);
+    if(ug>.5&&MB.filter(m=>m.cave).length<3&&Math.random()<dt*.12)spawnMob('z',true);
+  }
+  for(let i=MB.length-1;i>=0;i--){
+    const m=MB[i],dx=P.x-m.x,dz=P.z-m.z,d=Math.hypot(dx,dz)||1;
+    let sp=0;
+    if(m.t=='z'&&d<18){m.yaw=Math.atan2(dx,dz);sp=2.3}
+    else{m.ai-=dt;if(m.ai<0){m.ai=1+Math.random()*3;m.yaw=Math.random()*6.283;m.go=Math.random()<.6}sp=m.go?1.2:0}
+    const mx=Math.sin(m.yaw)*sp+m.kx,mz=Math.cos(m.yaw)*sp+m.kz;
+    m.kx*=Math.max(0,1-6*dt);m.kz*=Math.max(0,1-6*dt);
+    const bx=mstep(m,'x',mx*dt),bz=mstep(m,'z',mz*dt);
+    m.vy-=26*dt;m.on=false;
+    if(mstep(m,'y',Math.max(m.vy,-30)*dt)){m.on=m.vy<0;m.vy=0}
+    if((bx||bz)&&m.on&&sp>0)m.vy=8;
+    m.cd-=dt;
+    if(m.t=='z'&&!creative&&d<1.1&&Math.abs(m.y-P.y)<1.6&&m.cd<=0){m.cd=1;hurt(2)}
+    // zumbi só pega fogo no sol de verdade: sem teto acima dele
+    const sun=m.t=='z'&&dl>.75&&TOP[cl(Math.floor(m.x),0,W-1)*D+cl(Math.floor(m.z),0,D-1)]<m.y;
+    if((sun&&(m.burn+=dt)>4)||d>45||m.y<0){S.remove(m.g);MB.splice(i,1);continue}
+    m.g.position.set(m.x,m.y,m.z);m.g.rotation.y=m.yaw;
+  }
+}
+
+// ---- loop
+function tick(dt){
+  let fw=(K.KeyW?1:0)-(K.KeyS?1:0)-J.y,st=(K.KeyD?1:0)-(K.KeyA?1:0)+J.x;
+  const l=Math.hypot(fw,st);if(l>1){fw/=l;st/=l}
+  const sn=Math.sin(P.yaw),cs=Math.cos(P.yaw);
+  const inW=get(Math.floor(P.x),Math.floor(P.y+.6),Math.floor(P.z))==WA,sp=(fly?10.8:K.ShiftLeft?1.3:(K.ControlLeft||sprint)?5.6:4.4)*(inW?.55:1),mx=(-sn*fw+cs*st)*sp,mz=(-cs*fw-sn*st)*sp;
+  if((K.Space||jh)&&P.ground)P.vy=8.2;
+  P.vy=fly?((K.Space||jh)?8:(K.ShiftLeft||dn)?-8:0):inW?((K.Space||jh)?3.6:-2.4):Math.max(P.vy-26*dt,-30);
+  const bx=step('x',mx*dt),bz=step('z',mz*dt);
+  P.ground=false;
+  if(step('y',P.vy*dt)){if(P.vy<0){P.ground=true;land()}P.vy=0}
+  if((bx||bz)&&P.ground&&canStep(Math.sign(mx)*.4,Math.sign(mz)*.4))P.vy=8.2;
+  cam.position.set(P.x,P.y+(K.ShiftLeft&&!fly?1.38:1.62),P.z);
+  cam.rotation.set(P.pitch,P.yaw,0);
+  const r=tgt=ray();hl.visible=!!r;
+  if(r)hl.position.set(r.x+.5,r.y+.5,r.z+.5);
+}
+let t0=performance.now();
+(function loop(t){
+  requestAnimationFrame(loop);
+  const dt=Math.min((t-t0)/1000,.05);t0=t;
+  frame(dt);R.render(S,cam);
+})(t0);
+
+// ---- início: o título mostra um mundo gerado ao fundo
+el('splash').textContent=['Feito em 5 minutos!','Agora com cavernas!','Ache diamantes!','Quebre tudo!','100% JavaScript!','Cuidado com a queda!','Sem creepers!'][Math.random()*7|0];
+show('main');
+boot=(async()=>{try{await makeWorld(1,null,true);prime(20);ready=true}finally{busy=false}})();
+setInterval(save,30000);
+addEventListener('pagehide',save);
+})();
+</script>
+</body>
+</html>
